@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BIKE24 · Translation Pipeline</title>
-  <!-- Hosted via GitHub Pages – do not open as local file:// -->
+  <!-- v2.1 – Status Check updated: language flags via n8n reference check -->
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -399,6 +399,58 @@
       .topbar    { padding: 0 20px; }
       .hero      { padding: 16px 20px; }
     }
+
+    /* ══ LANGUAGE FLAGS ══ */
+    .lang-area { display: none; flex-direction: column; gap: 8px; }
+    .lang-area.visible { display: flex; }
+    .lang-area-label {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray500);
+    }
+    .lang-flags { display: flex; flex-wrap: wrap; gap: 7px; }
+    .lang-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: var(--gray100);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer; text-decoration: none; color: var(--dark);
+      transition: border-color 0.18s, background 0.18s, transform 0.12s;
+      position: relative;
+    }
+    .lang-pill:hover {
+      border-color: var(--blue); background: #e8f2fd;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,114,232,0.15);
+    }
+    .lang-pill-flag { font-size: 20px; line-height: 1; }
+    .lang-pill-code {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 11px;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--gray500);
+    }
+    .lang-pill:hover .lang-pill-code { color: var(--blue); }
+    .lang-pill::after {
+      content: attr(data-title);
+      position: absolute; bottom: calc(100% + 6px);
+      left: 50%; transform: translateX(-50%);
+      background: var(--dark); color: var(--white);
+      font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+      padding: 4px 9px; border-radius: 6px;
+      white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s; z-index: 20;
+    }
+    .lang-pill:hover::after { opacity: 1; }
+    .lang-empty {
+      padding: 11px 13px; background: var(--gray100);
+      border: 2px dashed #c4ccd8; border-radius: var(--radius);
+      font-size: 11px; color: var(--gray500); font-style: italic;
+    }
+    .btn-check:disabled { opacity: 0.45; cursor: not-allowed; }
+
   </style>
 </head>
 <body>
@@ -452,20 +504,20 @@
       <div id="devPanel" style="display:none;">
         <div class="card-body" style="background:#0d1117;gap:12px;">
           <div class="field">
-            <label style="color:#506688;">ContentBird API Token</label>
+            <label style="color:#506688;">n8n Reference Check Webhook</label>
             <div style="position:relative;">
-              <input type="password" id="cbApiToken" placeholder="Bearer xxxxxxxxxxxxxxxx" autocomplete="off"
+              <input type="password" id="refWebhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/bike24-reference-check" autocomplete="off"
                 style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
-              <button onclick="toggleVis('cbApiToken',this)" title="Show/hide"
+              <button onclick="toggleVis('refWebhook',this)" title="Show/hide"
                 style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
             </div>
           </div>
           <div class="field">
-            <label style="color:#506688;">n8n Webhook URL</label>
+            <label style="color:#506688;">n8n Step 1 Translation Webhook</label>
             <div style="position:relative;">
-              <input type="password" id="n8nTranslationWebhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/…" autocomplete="off"
+              <input type="password" id="step1Webhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/bike24-translation-trigger" autocomplete="off"
                 style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
-              <button onclick="toggleVis('n8nTranslationWebhook',this)" title="Show/hide"
+              <button onclick="toggleVis('step1Webhook',this)" title="Show/hide"
                 style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
             </div>
           </div>
@@ -489,25 +541,17 @@
       <div class="card-body">
         <div class="status-fields">
           <div class="field">
-            <label>ContentBird Source URL (DE)</label>
-            <input type="url" id="statusUrl" placeholder="https://bike24net.mycontentbird.io/…">
+            <label>ContentBird Source URL <span class="req">*</span></label>
+            <input type="url" id="statusUrl"
+              placeholder="https://bike24net.mycontentbird.io/creation/content/…"
+              oninput="onUrlInput()">
           </div>
-          <div class="field">
-            <label>Target Language</label>
-            <select id="statusLang">
-              <option value="">— Select language —</option>
-              <option value="fr">🇫🇷 French (FR)</option>
-              <option value="fr-be">🇧🇪 French (BE)</option>
-              <option value="it">🇮🇹 Italian (IT)</option>
-              <option value="es">🇪🇸 Spanish (ES)</option>
-              <option value="nl">🇳🇱 Dutch (NL)</option>
-              <option value="nl-be">🇧🇪 Dutch (BE)</option>
-              <option value="en">🇬🇧 English (UK)</option>
-              <option value="pl">🇵🇱 Polish (PL)</option>
-              <option value="fi">🇫🇮 Finnish (FI)</option>
-            </select>
+          <!-- Language flags – appear after check -->
+          <div class="lang-area" id="langArea">
+            <div class="lang-area-label">Already duplicated into</div>
+            <div class="lang-flags" id="langFlags"></div>
           </div>
-          <button class="btn-check" onclick="checkStatus()">▶ Check Status</button>
+          <button class="btn-check" id="checkBtn" onclick="checkStatus()" disabled>▶ Check Status</button>
         </div>
       </div>
     </div>
@@ -783,6 +827,70 @@
 <script>
   let currentStatus = null;
 
+  const FLAG_MAP = {
+    'de':    { flag: '🇩🇪', label: 'DE' },
+    'en':    { flag: '🇬🇧', label: 'EN' },
+    'fr':    { flag: '🇫🇷', label: 'FR' },
+    'es':    { flag: '🇪🇸', label: 'ES' },
+    'it':    { flag: '🇮🇹', label: 'IT' },
+    'nl':    { flag: '🇳🇱', label: 'NL' },
+    'pl':    { flag: '🇵🇱', label: 'PL' },
+    'fi':    { flag: '🇫🇮', label: 'FI' },
+    'cs':    { flag: '🇨🇿', label: 'CZ' },
+    'da':    { flag: '🇩🇰', label: 'DK' },
+    'sv':    { flag: '🇸🇪', label: 'SE' },
+    'no':    { flag: '🇳🇴', label: 'NO' },
+    'us':    { flag: '🇺🇸', label: 'US' },
+    'en-us': { flag: '🇺🇸', label: 'US' },
+    'fr-be': { flag: '🇧🇪', label: 'FR-BE' },
+    'nl-be': { flag: '🇧🇪', label: 'NL-BE' },
+  };
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    const saved = sessionStorage.getItem('bike24_cfg');
+    if (saved) {
+      try {
+        const cfg = JSON.parse(saved);
+        document.getElementById('refWebhook').value   = cfg.refWebhook   || '';
+        document.getElementById('step1Webhook').value = cfg.step1Webhook || '';
+        logLine('Developer config loaded from session · ready to connect', 'ok');
+      } catch(e) {}
+    }
+  });
+
+  // ── URL INPUT ──
+  function onUrlInput() {
+    const url = document.getElementById('statusUrl').value.trim();
+    const hasId = /\/content\/\d+/.test(url);
+    document.getElementById('checkBtn').disabled = !hasId;
+    document.getElementById('langArea').classList.remove('visible');
+    document.getElementById('langFlags').innerHTML = '';
+  }
+
+  // ── RENDER FLAGS ──
+  function renderFlags(languages) {
+    const area = document.getElementById('langArea');
+    const box  = document.getElementById('langFlags');
+    box.innerHTML = '';
+    if (!languages || languages.length === 0) {
+      area.classList.add('visible');
+      box.innerHTML = '<div class="lang-empty">No duplicates found yet for this document</div>';
+      return;
+    }
+    languages.forEach(lang => {
+      const code = (lang.language || '').toLowerCase();
+      const info = FLAG_MAP[code] || { flag: '🌐', label: code.toUpperCase() };
+      const a = document.createElement('a');
+      a.href = lang.docUrl; a.target = '_blank'; a.className = 'lang-pill';
+      a.dataset.title = lang.title || info.label;
+      a.innerHTML = '<span class="lang-pill-flag">' + info.flag + '</span><span class="lang-pill-code">' + info.label + '</span>';
+      box.appendChild(a);
+    });
+    area.classList.add('visible');
+    logLine('Duplicates: ' + languages.map(l => (FLAG_MAP[(l.language||'').toLowerCase()]||{label:l.language}).label).join(', '), 'ok');
+  }
+
   // ── DEV CONFIG ─────────────────────────────────────────────
   function toggleDev() {
     const panel   = document.getElementById('devPanel');
@@ -800,11 +908,11 @@
   }
 
   function saveDevConfig() {
-    // Store in sessionStorage (cleared when tab closes – never persisted to disk)
-    const token   = document.getElementById('cbApiToken').value.trim();
-    const transWH = document.getElementById('n8nTranslationWebhook').value.trim();
-    if (token)   sessionStorage.setItem('cb_token', token);
-    if (transWH) sessionStorage.setItem('n8n_webhook', transWH);
+    const cfg = {
+      refWebhook:   document.getElementById('refWebhook').value.trim(),
+      step1Webhook: document.getElementById('step1Webhook').value.trim(),
+    };
+    sessionStorage.setItem('bike24_cfg', JSON.stringify(cfg));
     const msg = document.getElementById('devSaveMsg');
     msg.style.display = 'inline';
     setTimeout(() => { msg.style.display = 'none'; }, 2500);
@@ -812,10 +920,8 @@
   }
 
   function getDevConfig() {
-    return {
-      token:   sessionStorage.getItem('cb_token')   || '',
-      webhook: sessionStorage.getItem('n8n_webhook') || '',
-    };
+    try { return JSON.parse(sessionStorage.getItem('bike24_cfg') || '{}'); }
+    catch(e) { return {}; }
   }
 
   // ── LOG HELPERS ─────────────────────────────────────────────
@@ -872,54 +978,61 @@
   }
 
   // ── STATUS CHECK ────────────────────────────────────────────
-  function checkStatus() {
-    const url  = document.getElementById('statusUrl').value.trim();
-    const lang = document.getElementById('statusLang').value;
-    if (!url || !lang) {
-      alert('Please enter a ContentBird URL and select a target language.');
-      return;
-    }
+  async function checkStatus() {
+    const url   = document.getElementById('statusUrl').value.trim();
+    const match = url.match(/\/content\/(\d+)/);
+    if (!match) return;
+    const contentId = match[1];
 
-    logLine('Checking document status…', 'step');
+    const btn = document.getElementById('checkBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Checking…';
+    setLogState('running');
+
+    logLine('▶ Status Check · ContentBird Reference Lookup', 'step');
     logLine('CB URL: ' + url, 'info');
-    logLine('Target language: ' + lang.toUpperCase(), 'info');
+    logLine('Content ID: ' + contentId, 'info');
 
-    // ── Use single webhook with action: status_check ──
     const cfg = getDevConfig();
-    if (cfg.webhook) {
-      logLine('Calling n8n → action: status_check…', 'info');
-      fetch(cfg.webhook, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ action: 'status_check', cbUrl: url,
-          targetLanguage: lang, cbApiToken: cfg.token })
-      }).then(r => r.json()).then(d => {
-        logLine('Status response received: ' + d.status, 'ok');
-        setStatus(d.status);
-      }).catch(e => logLine('Status check failed: ' + e.message, 'error'));
+
+    if (!cfg.refWebhook) {
+      // ── DEMO MODE ──
+      logLine('No Reference Check webhook configured → demo mode', 'warn');
+      await new Promise(r => setTimeout(r, 500));
+      const demo = [
+        { language: 'it', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20309', title: 'Leadgen | Cannondale SuperSix EVO | IT' },
+        { language: 'es', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20310', title: 'Leadgen | Cannondale SuperSix EVO | ES' },
+        { language: 'pl', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20311', title: 'Leadgen | Cannondale SuperSix EVO | PL' },
+        { language: 'us', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20312', title: 'Leadgen | Cannondale SuperSix EVO | US' },
+        { language: 'nl', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20313', title: 'Leadgen | Cannondale SuperSix EVO | NL' },
+      ];
+      logLine('5 duplicates found (demo data)', 'ok');
+      renderFlags(demo);
+      setStatus('orange');
+      btn.disabled = false; btn.textContent = '▶ Check Status';
+      setLogState('done');
       return;
     }
-    // ── Fallback demo if no webhook configured ──
-    // fetch('YOUR_N8N_STATUS_WEBHOOK', {
-    //   method: 'POST', headers: {'Content-Type':'application/json'},
-    //   body: JSON.stringify({ cbUrl: url, targetLanguage: lang })
-    // }).then(r => r.json()).then(d => {
-    //   logLine('Status response received: ' + d.status, 'ok');
-    //   setStatus(d.status);
-    // }).catch(e => logLine('Status check failed: ' + e.message, 'error'));
 
-    // Demo simulation
-    const demo = url.length % 3;
-    const result = demo === 0 ? 'red' : demo === 1 ? 'orange' : 'green';
-    const msgs = {
-      red:    ['No target document found in ContentBird', 'warn'],
-      orange: ['Document found – SEO keywords still missing', 'warn'],
-      green:  ['Document ready – keywords confirmed ✓', 'ok'],
-    };
-    setTimeout(() => {
-      logLine('Google Sheet lookup complete', 'info');
-      logLine(msgs[result][0], msgs[result][1]);
-      setStatus(result);
-    }, 400);
+    // ── REAL n8n CALL ──
+    try {
+      logLine('Calling n8n → reference_check…', 'info');
+      const res = await fetch(cfg.refWebhook, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentId, cbUrl: url })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      logLine('Reference check complete · ' + (data.count || 0) + ' duplicate(s) found', 'ok');
+      renderFlags(data.languages || []);
+      setStatus((data.count || 0) === 0 ? 'red' : 'orange');
+    } catch(err) {
+      logLine('Reference check failed: ' + err.message, 'error');
+      setLogState('error');
+    } finally {
+      btn.disabled = false; btn.textContent = '▶ Check Status';
+      if (!document.getElementById('logDot').className.includes('error')) setLogState('done');
+    }
   }
 
   function setStatus(status) {
@@ -958,8 +1071,8 @@
   // ── SUBMIT / PIPELINE ───────────────────────────────────────
   function handleSubmit() {
     const cfg3 = getDevConfig();
-    if (!cfg3.webhook) {
-      logLine('No webhook configured – running demo mode', 'warn');
+    if (!cfg3.step1Webhook) {
+      logLine('No Step 1 webhook configured – running demo mode', 'warn');
     }
     const lang     = document.getElementById('targetLanguage').value;
     const mode     = document.getElementById('workflowMode').value;
@@ -979,32 +1092,20 @@
     logLine(`Mode: ${mode.toUpperCase()} · Language: ${lang.toUpperCase()} · Persona: ${persona}`, 'info');
     logLine('Sending payload to n8n webhook…', 'info');
 
-    // ── Use single webhook with action: translate ──
     const cfg2 = getDevConfig();
-    if (cfg2.webhook) {
-      fetch(cfg2.webhook, {
+    if (cfg2.step1Webhook) {
+      fetch(cfg2.step1Webhook, {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({...payload, action: 'translate', cbApiToken: cfg2.token})
-      }).then(r => r.json()).then(d => {
-        simulatePipelineLog(lang, mode, d);
+        body: JSON.stringify({...payload, action: 'translate'})
+      }).then(r => r.json()).then(() => {
+        simulatePipelineLog(lang, mode);
       }).catch(e => {
         logLine('Webhook error: ' + e.message, 'error');
         setLogState('error');
       });
       return;
     }
-    // ── Fallback demo if no webhook configured ──
-    // fetch(webhookUrl, {
-    //   method: 'POST', headers: {'Content-Type':'application/json'},
-    //   body: JSON.stringify(payload)
-    // }).then(r => r.json()).then(d => {
-    //   simulatePipelineLog(lang, mode, d);
-    // }).catch(e => {
-    //   logLine('Webhook error: ' + e.message, 'error');
-    //   setLogState('error');
-    // });
-
-    // Demo pipeline simulation
+    // Demo pipeline simulation (no webhook configured)
     simulatePipelineLog(lang, mode);
   }
 
@@ -1056,7 +1157,8 @@
   }
 
   ['workflowMode','textType','targetLanguage','targetPersona'].forEach(id => {
-    document.getElementById(id).addEventListener('change', updateSubmitBtn);
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', updateSubmitBtn);
   });
 </script>
 </body>
