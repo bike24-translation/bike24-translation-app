@@ -504,6 +504,15 @@
       <div id="devPanel" style="display:none;">
         <div class="card-body" style="background:#0d1117;gap:12px;">
           <div class="field">
+            <label style="color:#506688;">ContentBird API Token</label>
+            <div style="position:relative;">
+              <input type="password" id="cbApiToken" placeholder="Bearer xxxxxxxxxxxxxxxx" autocomplete="off"
+                style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
+              <button onclick="toggleVis('cbApiToken',this)" title="Show/hide"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
+            </div>
+          </div>
+          <div class="field">
             <label style="color:#506688;">n8n Reference Check Webhook</label>
             <div style="position:relative;">
               <input type="password" id="refWebhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/bike24-reference-check" autocomplete="off"
@@ -852,6 +861,7 @@
     if (saved) {
       try {
         const cfg = JSON.parse(saved);
+        document.getElementById('cbApiToken').value   = cfg.cbApiToken   || '';
         document.getElementById('refWebhook').value   = cfg.refWebhook   || '';
         document.getElementById('step1Webhook').value = cfg.step1Webhook || '';
         logLine('Developer config loaded from session · ready to connect', 'ok');
@@ -909,6 +919,7 @@
 
   function saveDevConfig() {
     const cfg = {
+      cbApiToken:   document.getElementById('cbApiToken').value.trim(),
       refWebhook:   document.getElementById('refWebhook').value.trim(),
       step1Webhook: document.getElementById('step1Webhook').value.trim(),
     };
@@ -1019,7 +1030,7 @@
       logLine('Calling n8n → reference_check…', 'info');
       const res = await fetch(cfg.refWebhook, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentId, cbUrl: url })
+        body: JSON.stringify({ contentId, cbUrl: url, cbApiToken: cfg.cbApiToken })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
