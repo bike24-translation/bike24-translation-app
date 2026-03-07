@@ -809,7 +809,7 @@
       <span>Start Translation Pipeline</span>
       <span class="btn-arrow">→</span>
     </button>
-    <p class="submit-hint" id="submitHint">Complete Status Check and reach GREEN status to enable</p>
+    <p class="submit-hint" id="submitHint">Workflow Mode, Target Language, Persona and ContentBird Source required</p>
 
   </div><!-- /col-right -->
 
@@ -1074,9 +1074,13 @@
   }
 
   function updateSubmitBtn() {
-    const ready = currentStatus === 'green';
+    const mode    = document.getElementById('workflowMode').value;
+    const lang    = document.getElementById('targetLanguage').value;
+    const persona = document.getElementById('targetPersona').value;
+    const cbOption = document.querySelector('input[name="cbOption"]:checked');
+    const ready = mode && lang && persona && cbOption;
     document.getElementById('submitBtn').disabled = !ready;
-    document.getElementById('submitHint').classList.toggle('hidden', ready);
+    document.getElementById('submitHint').classList.toggle('hidden', !!ready);
   }
 
   // ── SUBMIT / PIPELINE ───────────────────────────────────────
