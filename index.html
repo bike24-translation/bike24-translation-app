@@ -1075,17 +1075,18 @@
 
   function updateSubmitBtn() {
     const mode     = document.getElementById('workflowMode').value;
+    const textType = document.getElementById('textType').value;
     const lang     = document.getElementById('targetLanguage').value;
     const persona  = document.getElementById('targetPersona').value;
     const cbOption = document.querySelector('input[name="cbOption"]:checked');
     const isGreen  = currentStatus === 'green';
-    const ready    = isGreen && mode && lang && persona && cbOption;
+    const ready    = isGreen && mode && textType && lang && persona && cbOption;
     document.getElementById('submitBtn').disabled = !ready;
     const hint = document.getElementById('submitHint');
     if (!isGreen) {
       hint.textContent = 'Complete Status Check and reach GREEN status to enable';
       hint.classList.remove('hidden');
-    } else if (!mode || !lang || !persona || !cbOption) {
+    } else if (!mode || !textType || !lang || !persona || !cbOption) {
       hint.textContent = 'Complete all fields on the right to start';
       hint.classList.remove('hidden');
     } else {
