@@ -890,11 +890,11 @@
     }
     languages.forEach(lang => {
       const code = (lang.language || '').toLowerCase();
-      const info = FLAG_MAP[code] || { flag: '🌐', label: code.toUpperCase() };
+      const info = FLAG_MAP[code] || { cc: 'un', label: code.toUpperCase() };
       const a = document.createElement('a');
       a.href = lang.docUrl; a.target = '_blank'; a.className = 'lang-pill';
       a.dataset.title = lang.title || info.label;
-      a.innerHTML = '<span class="lang-pill-flag">' + info.flag + '</span><span class="lang-pill-code">' + info.label + '</span>';
+      a.innerHTML = '<span class="lang-pill-flag">' + flagImg(info.cc || 'un') + '</span><span class="lang-pill-code">' + info.label + '</span>';
       box.appendChild(a);
     });
     area.classList.add('visible');
