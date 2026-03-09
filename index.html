@@ -836,6 +836,15 @@
 <script>
   let currentStatus = null;
 
+  function flagImg(cc) {
+    const emojiMap = {
+      'de':'🇩🇪','en':'🇬🇧','gb':'🇬🇧','fr':'🇫🇷','es':'🇪🇸','it':'🇮🇹',
+      'nl':'🇳🇱','pl':'🇵🇱','fi':'🇫🇮','be':'🇧🇪','cs':'🇨🇿','da':'🇩🇰',
+      'sv':'🇸🇪','no':'🇳🇴','un':'🌐'
+    };
+    return emojiMap[(cc||'').toLowerCase()] || '🌐';
+  }
+
   const FLAG_MAP = {
     'de':    { flag: '🇩🇪', label: 'DE' },
     'en':    { flag: '🇬🇧', label: 'EN' },
