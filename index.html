@@ -888,13 +888,19 @@
       box.innerHTML = '<div class="lang-empty">No duplicates found yet for this document</div>';
       return;
     }
+    // Count occurrences per language to detect duplicates
+    const langCount = {};
+    languages.forEach(l => { const c = (l.language||'').toLowerCase(); langCount[c] = (langCount[c]||0)+1; });
+
     languages.forEach(lang => {
       const code = (lang.language || '').toLowerCase();
       const info = FLAG_MAP[code] || { cc: 'un', label: code.toUpperCase() };
       const a = document.createElement('a');
       a.href = lang.docUrl; a.target = '_blank'; a.className = 'lang-pill';
       a.dataset.title = lang.title || info.label;
-      a.innerHTML = '<span class="lang-pill-flag">' + flagImg(info.cc || 'un') + '</span><span class="lang-pill-code">' + info.label + '</span>';
+      // Show docId if there are multiple docs for same language
+      const idLabel = langCount[code] > 1 ? ' <span style="font-size:9px;opacity:0.7">#' + lang.docId + '</span>' : '';
+      a.innerHTML = '<span class="lang-pill-flag">' + flagImg(info.cc || 'un') + '</span><span class="lang-pill-code">' + info.label + idLabel + '</span>';
       box.appendChild(a);
     });
     area.classList.add('visible');
@@ -1033,10 +1039,14 @@
         body: JSON.stringify({ contentId, cbUrl: url, cbApiToken: cfg.cbApiToken })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      logLine('Reference check complete · ' + (data.count || 0) + ' duplicate(s) found', 'ok');
-      renderFlags(data.languages || []);
-      setStatus((data.count || 0) === 0 ? 'red' : 'orange');
+      const raw = await res.json();
+      // n8n allIncomingItems returns an array → unwrap first item
+      const data = Array.isArray(raw) ? raw[0] : raw;
+      const langs = data.languages || data[0]?.languages || [];
+      const count = data.count ?? langs.length;
+      logLine('Reference check complete · ' + count + ' duplicate(s) found', 'ok');
+      renderFlags(langs);
+      setStatus(count === 0 ? 'red' : 'orange');
     } catch(err) {
       logLine('Reference check failed: ' + err.message, 'error');
       setLogState('error');
