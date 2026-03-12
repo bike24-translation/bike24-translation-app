@@ -515,7 +515,7 @@
           <div class="field">
             <label style="color:#506688;">n8n Reference Check Webhook</label>
             <div style="position:relative;">
-              <input type="password" id="refWebhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/bike24-reference-check" autocomplete="off"
+              <input type="password" id="refWebhook" placeholder="https://bike24.app.n8n.cloud/webhook/bike24-reference-check" autocomplete="off"
                 style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
               <button onclick="toggleVis('refWebhook',this)" title="Show/hide"
                 style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
@@ -524,7 +524,7 @@
           <div class="field">
             <label style="color:#506688;">n8n Step 1 Translation Webhook</label>
             <div style="position:relative;">
-              <input type="password" id="step1Webhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/bike24-translation-trigger" autocomplete="off"
+              <input type="password" id="step1Webhook" placeholder="https://bike24.app.n8n.cloud/webhook/bike24-translation-trigger" autocomplete="off"
                 style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
               <button onclick="toggleVis('step1Webhook',this)" title="Show/hide"
                 style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
@@ -836,32 +836,23 @@
 <script>
   let currentStatus = null;
 
-  function flagImg(cc) {
-    const emojiMap = {
-      'de':'🇩🇪','en':'🇬🇧','gb':'🇬🇧','fr':'🇫🇷','es':'🇪🇸','it':'🇮🇹',
-      'nl':'🇳🇱','pl':'🇵🇱','fi':'🇫🇮','be':'🇧🇪','cs':'🇨🇿','da':'🇩🇰',
-      'sv':'🇸🇪','no':'🇳🇴','un':'🌐'
-    };
-    return emojiMap[(cc||'').toLowerCase()] || '🌐';
-  }
-
   const FLAG_MAP = {
-    'de':    { cc: 'de', label: 'DE' },
-    'en':    { cc: 'gb', label: 'EN' },
-    'fr':    { cc: 'fr', label: 'FR' },
-    'es':    { cc: 'es', label: 'ES' },
-    'it':    { cc: 'it', label: 'IT' },
-    'nl':    { cc: 'nl', label: 'NL' },
-    'pl':    { cc: 'pl', label: 'PL' },
-    'fi':    { cc: 'fi', label: 'FI' },
-    'cs':    { cc: 'cs', label: 'CZ' },
-    'da':    { cc: 'da', label: 'DK' },
-    'sv':    { cc: 'sv', label: 'SE' },
-    'no':    { cc: 'no', label: 'NO' },
-    'us':    { cc: 'us', label: 'US' },
-    'en-us': { cc: 'us', label: 'US' },
-    'fr-be': { cc: 'be', label: 'FR-BE' },
-    'nl-be': { cc: 'be', label: 'NL-BE' },
+    'de':    { flag: '🇩🇪', label: 'DE' },
+    'en':    { flag: '🇬🇧', label: 'EN' },
+    'fr':    { flag: '🇫🇷', label: 'FR' },
+    'es':    { flag: '🇪🇸', label: 'ES' },
+    'it':    { flag: '🇮🇹', label: 'IT' },
+    'nl':    { flag: '🇳🇱', label: 'NL' },
+    'pl':    { flag: '🇵🇱', label: 'PL' },
+    'fi':    { flag: '🇫🇮', label: 'FI' },
+    'cs':    { flag: '🇨🇿', label: 'CZ' },
+    'da':    { flag: '🇩🇰', label: 'DK' },
+    'sv':    { flag: '🇸🇪', label: 'SE' },
+    'no':    { flag: '🇳🇴', label: 'NO' },
+    'us':    { flag: '🇺🇸', label: 'US' },
+    'en-us': { flag: '🇺🇸', label: 'US' },
+    'fr-be': { flag: '🇧🇪', label: 'FR-BE' },
+    'nl-be': { flag: '🇧🇪', label: 'NL-BE' },
   };
 
   // ── INIT ──
@@ -897,23 +888,24 @@
       box.innerHTML = '<div class="lang-empty">No duplicates found yet for this document</div>';
       return;
     }
-    // Count occurrences per language to detect duplicates
-    const langCount = {};
-    languages.forEach(l => { const c = (l.language||'').toLowerCase(); langCount[c] = (langCount[c]||0)+1; });
-
     languages.forEach(lang => {
       const code = (lang.language || '').toLowerCase();
       const info = FLAG_MAP[code] || { cc: 'un', label: code.toUpperCase() };
       const a = document.createElement('a');
       a.href = lang.docUrl; a.target = '_blank'; a.className = 'lang-pill';
-      a.dataset.title = lang.title || info.label;
-      // Show docId if there are multiple docs for same language
-      const idLabel = langCount[code] > 1 ? ' <span style="font-size:9px;opacity:0.7">#' + lang.docId + '</span>' : '';
-      a.innerHTML = '<span class="lang-pill-flag">' + flagImg(info.cc || 'un') + '</span><span class="lang-pill-code">' + info.label + idLabel + '</span>';
+      const tooltipParts = [lang.title || info.label];
+      if (lang.statusName)  tooltipParts.push((lang.statusColor || '') + ' ' + lang.statusName);
+      if (lang.autor)       tooltipParts.push('👤 ' + lang.autor);
+      a.dataset.title = tooltipParts.join(' · ');
+      a.innerHTML = '<span class="lang-pill-flag">' + flagImg(info.cc) + '</span><span class="lang-pill-code">' + info.label + '</span>';
       box.appendChild(a);
     });
     area.classList.add('visible');
-    logLine('Duplicates: ' + languages.map(l => (FLAG_MAP[(l.language||'').toLowerCase()]||{label:l.language}).label).join(', '), 'ok');
+    languages.forEach(l => {
+      const label = (FLAG_MAP[(l.language||'').toLowerCase()]||{label:l.language}).label;
+      const status = l.statusName ? ' · ' + (l.statusColor || '') + ' ' + l.statusName : '';
+      logLine(label + status + ' → ' + (l.docUrl || ''), 'info');
+    });
   }
 
   // ── DEV CONFIG ─────────────────────────────────────────────
@@ -1049,11 +1041,14 @@
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const raw = await res.json();
-      // n8n allIncomingItems returns an array → unwrap first item
-      const data = Array.isArray(raw) ? raw[0] : raw;
-      const langs = data.languages || data[0]?.languages || [];
-      const count = data.count ?? langs.length;
+      // n8n allIncomingItems returns [{json:{...}}] – unwrap correctly
+      const payload = Array.isArray(raw)
+        ? (raw[0]?.json ?? raw[0])
+        : (raw?.json ?? raw);
+      const langs = payload.languages || [];
+      const count = payload.count ?? langs.length;
       logLine('Reference check complete · ' + count + ' duplicate(s) found', 'ok');
+      if (payload.sourceTitle) logLine('Source: ' + payload.sourceTitle, 'info');
       renderFlags(langs);
       setStatus(count === 0 ? 'red' : 'orange');
     } catch(err) {
