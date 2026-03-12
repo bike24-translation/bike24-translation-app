@@ -342,6 +342,13 @@
               <button onclick="toggleVis('step1Webhook',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;">👁</button>
             </div>
           </div>
+          <div class="field">
+            <label style="color:#506688;">n8n Keyword Sync Webhook</label>
+            <div style="position:relative;">
+              <input type="password" id="kwSyncWebhook" placeholder="https://bike24.app.n8n.cloud/webhook/bike24-keyword-sync" autocomplete="off" style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
+              <button onclick="toggleVis('kwSyncWebhook',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;">👁</button>
+            </div>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <button onclick="saveDevConfig()" style="font-family:'Barlow',sans-serif;font-weight:900;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;background:var(--blue);color:white;border:none;border-radius:7px;padding:9px 16px;cursor:pointer;">Save Config</button>
             <span id="devSaveMsg" style="font-size:10px;color:#4ade80;display:none;">✓ Saved to session</span>
@@ -552,9 +559,56 @@
         <div class="divider"></div>
 
         <div class="field">
-          <label>SEO Keywords <span style="font-size:9px;background:var(--blue300);color:var(--blue600);padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px;font-style:normal;">FROM CB</span></label>
-          <div id="keywordsBox" style="background:var(--gray100);border:2px solid transparent;border-radius:var(--radius);padding:9px 12px;font-size:12px;color:var(--gray500);font-style:italic;min-height:38px;line-height:1.6;">No document selected yet</div>
-          <span class="help">Auto-loaded from ContentBird · read-only</span>
+          <!-- ── MAIN KEYWORD ── -->
+          <label>Main Keyword
+            <span style="font-size:9px;background:var(--yellow);color:var(--dark);padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px;font-weight:900;">MAIN KW</span>
+            <span style="font-size:9px;background:var(--blue300);color:var(--blue600);padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:3px;font-style:normal;">FROM CB</span>
+          </label>
+          <div style="display:flex;gap:8px;align-items:stretch;">
+            <div style="flex:1;position:relative;">
+              <input type="text" id="mainKwInput" placeholder="e.g. gravel bike"
+                style="width:100%;padding-left:30px;font-size:13px;"
+                oninput="onMainKwInput()">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;">⭐</span>
+            </div>
+            <div style="width:80px;">
+              <input type="text" id="mainKwSv" placeholder="SV"
+                style="width:100%;font-size:13px;text-align:right;"
+                oninput="onMainKwInput()">
+            </div>
+          </div>
+          <span class="help" style="margin-bottom:4px;">Primary ranking keyword · fills "Main KW + SV" in sheet</span>
+
+          <!-- ── SECONDARY KEYWORDS ── -->
+          <label style="margin-top:8px;">Secondary Keywords
+            <span id="kwCountBadge" style="display:none;font-size:9px;background:var(--state-green);color:white;padding:1px 6px;border-radius:4px;margin-left:4px;">0 / 14</span>
+            <span style="font-size:9px;background:var(--blue300);color:var(--blue600);padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:3px;font-style:normal;">FROM CB</span>
+          </label>
+          <!-- Pill display -->
+          <div id="keywordsBox" onclick="enableKwEdit()" title="Click to add keywords"
+            style="background:var(--gray100);border:2px solid transparent;border-radius:var(--radius);padding:8px 12px;min-height:38px;cursor:pointer;transition:border-color 0.3s;display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+            <span style="font-size:12px;color:var(--gray500);font-style:italic;">No secondary keywords yet</span>
+          </div>
+          <!-- Edit textarea -->
+          <textarea id="keywordsEdit" rows="3"
+            placeholder="KW2, KW3, KW4 … (comma-separated, max 14)"
+            style="display:none;font-family:'Inter',sans-serif;font-weight:500;font-size:12px;color:var(--dark);background:var(--white);border:2px solid var(--blue);border-radius:var(--radius);padding:9px 12px;width:100%;resize:vertical;line-height:1.6;"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;gap:6px;flex-wrap:wrap;">
+            <span class="help" id="kwHelp">KW2–KW15 · click to edit and add more</span>
+            <div style="display:flex;gap:5px;">
+              <button id="skipKwBtn" onclick="skipKeywords()" style="display:none;font-family:'Barlow',sans-serif;font-weight:900;font-size:9px;letter-spacing:0.09em;text-transform:uppercase;background:var(--gray100);color:var(--gray500);border:1px solid #c4ccd8;border-radius:5px;padding:4px 10px;cursor:pointer;"
+                onmouseover="this.style.background='var(--orange)';this.style.color='white'" onmouseout="this.style.background='var(--gray100)';this.style.color='var(--gray500)'">
+                Skip
+              </button>
+              <button id="saveKwBtn" onclick="saveKeywords()" style="display:none;font-family:'Barlow',sans-serif;font-weight:900;font-size:9px;letter-spacing:0.09em;text-transform:uppercase;background:var(--blue);color:white;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;"
+                onmouseover="this.style.background='var(--blue500)'" onmouseout="this.style.background='var(--blue)'">
+                💾 Save to CB + Sheet
+              </button>
+              <button id="cancelKwBtn" onclick="cancelKwEdit()" style="display:none;font-family:'Barlow',sans-serif;font-weight:900;font-size:9px;letter-spacing:0.09em;text-transform:uppercase;background:var(--gray100);color:var(--gray500);border:1px solid #c4ccd8;border-radius:5px;padding:4px 10px;cursor:pointer;">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="field">
@@ -614,13 +668,25 @@
   function flagImg(cc) { return FLAG_EMOJI[(cc||'').toLowerCase()] || '🌐'; }
 
   // CB Status → Ampel state mapping
-  // statusName from v2 workflow: 'Entwurf', 'In Bearbeitung', 'Übersetzung', 'Übersetzung fertig', 'Review', 'Veröffentlicht'
-  function statusToAmpel(statusName) {
-    if (!statusName) return 'blue';
-    const s = statusName.toLowerCase();
-    if (s.includes('veröffentlicht') || s.includes('fertig')) return 'green';
-    if (s.includes('übersetzung') || s.includes('review') || s.includes('bearbeitung')) return 'orange';
-    return 'blue'; // Entwurf or unknown = awaiting SEO keywords
+  function statusToAmpel(statusName, keywords) {
+    // If API already computed ampel, trust it
+    const s = (statusName || '').toLowerCase();
+    if (s.includes('veröffentlicht') || s.includes('published') || s.includes('approval')) return 'green';
+    if (s.includes('übersetzung') || s.includes('translation') || s.includes('editing') || s.includes('review')) return 'orange';
+    // Entwurf / Preparation / SEO Check → keywords decide
+    return (keywords && keywords.trim().length > 0) ? 'orange' : 'blue';
+  }
+
+  // CB type name → textType select value
+  function typeNameToValue(typeName) {
+    const map = {
+      'manufacturer page': 'mp', 'category page': 'cp',
+      'filter manufacturer page': 'f-mp', 'filter category page': 'f-cp',
+      'brand page': 'bp', 'newsletter': 'newsletter',
+      'email': 'email', 'product description': 'product',
+      'video': 'video', 'series': 'series', 'social': 'social'
+    };
+    return map[(typeName||'').toLowerCase()] || '';
   }
 
   // ── INIT ──
@@ -630,9 +696,10 @@
     if (saved) {
       try {
         const cfg = JSON.parse(saved);
-        document.getElementById('cbApiToken').value   = cfg.cbApiToken   || '';
-        document.getElementById('refWebhook').value   = cfg.refWebhook   || '';
-        document.getElementById('step1Webhook').value = cfg.step1Webhook || '';
+        document.getElementById('cbApiToken').value    = cfg.cbApiToken    || '';
+        document.getElementById('refWebhook').value    = cfg.refWebhook    || '';
+        document.getElementById('step1Webhook').value  = cfg.step1Webhook  || '';
+        document.getElementById('kwSyncWebhook').value = cfg.kwSyncWebhook || '';
         logLine('Developer config loaded from session', 'ok');
       } catch(e) {}
     }
@@ -691,10 +758,23 @@
       empty.style.display = 'none';
       document.getElementById('selectedDocTitle').textContent = docData.title || '—';
       document.getElementById('selectedDocLink').href = docData.docUrl;
-      const ampelState = statusToAmpel(docData.statusName);
+      // Use pre-computed ampel from API if available, else derive
+      const ampelState = docData.ampel || statusToAmpel(docData.statusName, docData.keywords);
       setStatus(ampelState);
       logLine('▶ Selected: ' + (docData.title || code.toUpperCase()), 'step');
-      if (docData.statusName) logLine('CB Status: ' + (docData.statusColor||'') + ' ' + docData.statusName, 'info');
+      if (docData.statusName) logLine('CB Status: ' + docData.statusName + (docData.keywords ? ' · Keywords: ' + docData.keywords : ' · No keywords yet'), 'info');
+
+      // Auto-fill Text Type
+      if (docData.typeName) {
+        const tv = typeNameToValue(docData.typeName);
+        const tt = document.getElementById('textType');
+        if (tv && tt) {
+          for (let i = 0; i < tt.options.length; i++) {
+            if (tt.options[i].value === tv) { tt.selectedIndex = i; break; }
+          }
+        }
+        if (!tv) logLine('Text Type "' + docData.typeName + '" not mapped – please select manually', 'warn');
+      }
     } else {
       box.style.display   = 'none';
       empty.style.display = 'block';
@@ -714,20 +794,39 @@
     }
     loadCbWorkflows(code);
 
-    // Update keywords box
+    // Update keywords fields
+    cancelKwEdit(); // reset edit mode on language switch
     const kwBox = document.getElementById('keywordsBox');
-    if (docData && docData.keywords) {
-      kwBox.style.color = 'var(--dark)';
-      kwBox.style.fontStyle = 'normal';
-      kwBox.textContent = docData.keywords;
+    if (docData && docData.keywords && docData.keywords.trim().length > 0) {
+      // Split: first keyword = Main KW, rest = secondary
+      const allKws = docData.keywords.split(',').map(k => k.trim()).filter(Boolean);
+      const mainKw = allKws[0] || '';
+      const secKws = allKws.slice(1);
+      // Fill main KW field
+      document.getElementById('mainKwInput').value = mainKw;
+      document.getElementById('mainKwSv').value    = docData.mainKwSv || '';
+      _currentMainKw = mainKw;
+      _currentMainSv = docData.mainKwSv || '';
+      // Fill secondary
+      _currentKwsFromCB = secKws.join(', ');
+      updateKwDisplay(secKws);
     } else if (docData) {
-      kwBox.style.color = 'var(--gray500)';
-      kwBox.style.fontStyle = 'italic';
-      kwBox.textContent = 'No keywords found in this document yet';
+      // Doc exists but no keywords
+      document.getElementById('mainKwInput').value = '';
+      document.getElementById('mainKwSv').value    = '';
+      _currentMainKw = ''; _currentMainSv = '';
+      _currentKwsFromCB = '';
+      updateKwDisplay([]);
+      kwBox.innerHTML = '<span style="font-size:12px;color:var(--orange);font-style:italic;">⚠ No keywords yet · click to add or wait for SEO team</span>';
+      kwBox.style.borderColor = 'var(--orange)';
     } else {
-      kwBox.style.color = 'var(--gray500)';
-      kwBox.style.fontStyle = 'italic';
-      kwBox.textContent = 'No document selected yet';
+      document.getElementById('mainKwInput').value = '';
+      document.getElementById('mainKwSv').value    = '';
+      _currentMainKw = ''; _currentMainSv = '';
+      _currentKwsFromCB = '';
+      kwBox.innerHTML = '<span style="font-size:12px;color:var(--gray500);font-style:italic;">No secondary keywords yet</span>';
+      kwBox.style.borderColor = 'transparent';
+      document.getElementById('kwCountBadge').style.display = 'none';
     }
 
     updateSubmitBtn();
@@ -898,6 +997,9 @@
   // ── AMPEL ──
   function setStatus(status) {
     currentStatus = status;
+    // Show skip button only when awaiting keywords
+    const skipBtn = document.getElementById('skipKwBtn');
+    if (skipBtn) skipBtn.style.display = status === 'blue' ? 'inline-block' : 'none';
     ['red','blue','orange','green'].forEach(s =>
       document.getElementById('lane-' + s).classList.remove('active-red','active-blue','active-orange','active-green')
     );
@@ -926,6 +1028,154 @@
   }
 
   // ── SUBMIT ──
+  // ── KEYWORD EDIT / SAVE ──
+  let _kwEditMode       = false;
+  let _currentKwsFromCB = '';  // secondary KWs (KW2–KW15) as comma-string
+  let _currentMainKw    = '';  // main keyword text
+  let _currentMainSv    = '';  // main keyword search volume
+
+  // Called on every keystroke in main KW fields
+  function onMainKwInput() {
+    _currentMainKw = (document.getElementById('mainKwInput').value || '').trim();
+    _currentMainSv = (document.getElementById('mainKwSv').value || '').trim();
+    updateSubmitBtn();
+  }
+
+  function enableKwEdit() {
+    if (_kwEditMode) return;
+    _kwEditMode = true;
+    const box  = document.getElementById('keywordsBox');
+    const edit = document.getElementById('keywordsEdit');
+    const save = document.getElementById('saveKwBtn');
+    const cancel = document.getElementById('cancelKwBtn');
+    edit.value = _currentKwsFromCB || '';
+    box.style.display  = 'none';
+    edit.style.display = 'block';
+    save.style.display = 'inline-block';
+    cancel.style.display = 'inline-block';
+    edit.focus();
+  }
+
+  function cancelKwEdit() {
+    _kwEditMode = false;
+    const box  = document.getElementById('keywordsBox');
+    const edit = document.getElementById('keywordsEdit');
+    const save = document.getElementById('saveKwBtn');
+    const cancel = document.getElementById('cancelKwBtn');
+    box.style.display  = 'flex';
+    edit.style.display = 'none';
+    save.style.display = 'none';
+    cancel.style.display = 'none';
+  }
+
+  async function saveKeywords() {
+    const cfg = getDevConfig();
+
+    // Main KW from field
+    const mainKw = (document.getElementById('mainKwInput').value || '').trim();
+    const mainSv = (document.getElementById('mainKwSv').value || '').trim();
+
+    // Secondary: merge CB existing + textarea input, max 14, deduplicate
+    const editVal  = (document.getElementById('keywordsEdit').value || '');
+    const cbSec    = _currentKwsFromCB.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+    const newSec   = editVal.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+    const merged   = [...new Set([...cbSec, ...newSec])].slice(0, 14);
+
+    const totalKws = (mainKw ? 1 : 0) + merged.length;
+    if (totalKws === 0) { logLine('No keywords to save', 'warn'); return; }
+    if (merged.length >= 14) logLine('⚠ Secondary keyword limit reached (14 max)', 'warn');
+
+    const saveBtn = document.getElementById('saveKwBtn');
+    saveBtn.textContent = '⏳ Saving…';
+    saveBtn.disabled = true;
+
+    logLine('Saving keywords → Main: "' + (mainKw||'—') + '" + ' + merged.length + ' secondary', 'step');
+
+    if (!cfg.kwSyncWebhook) {
+      await new Promise(r => setTimeout(r, 700));
+      logLine('Keywords saved (demo) · CB + Sheet updated', 'ok');
+      if (mainKw) { _currentMainKw = mainKw; _currentMainSv = mainSv; }
+      updateKwDisplay(merged);
+      cancelKwEdit();
+      saveBtn.textContent = '💾 Save to CB + Sheet';
+      saveBtn.disabled = false;
+      showToast('✅ Keywords saved');
+      if (currentStatus === 'blue') setStatus('orange');
+      return;
+    }
+
+    try {
+      // Build full keyword list: main first, then secondary
+      const allKws = mainKw ? [mainKw, ...merged] : merged;
+      const res = await fetch(cfg.kwSyncWebhook, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          docId:         selectedDocData ? selectedDocData.docId : '',
+          targetDocId:   selectedDocData ? selectedDocData.docId : '',
+          sourceDocId:   document.getElementById('statusUrl').value.trim().split('/').pop(),
+          language:      selectedLang,
+          mainKw,
+          mainSv,
+          keywords:      merged.join(', '),
+          cbKeywords:    _currentKwsFromCB,
+          sheetKeywords: ''
+        })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const finalSec = (data.mergedKeywords || merged.join(', ')).split(',').map(k => k.trim()).filter(Boolean);
+      logLine('Saved to CB + Sheet · main: "' + mainKw + '" + ' + finalSec.length + ' secondary', 'ok');
+      _currentMainKw = mainKw;
+      _currentMainSv = mainSv;
+      updateKwDisplay(finalSec);
+      cancelKwEdit();
+      showToast('✅ Keywords synced to CB + Sheet');
+      if (currentStatus === 'blue') setStatus('orange');
+    } catch(err) {
+      logLine('Keyword save failed: ' + err.message, 'error');
+    } finally {
+      saveBtn.textContent = '💾 Save to CB + Sheet';
+      saveBtn.disabled = false;
+    }
+  }
+
+  function updateKwDisplay(kwArray) {
+    _currentKwsFromCB = kwArray.join(', ');
+    const box = document.getElementById('keywordsBox');
+    // Render as pills
+    box.innerHTML = '';
+    if (kwArray.length === 0) {
+      box.innerHTML = '<span style="font-size:12px;color:var(--gray500);font-style:italic;">No secondary keywords yet · click to add</span>';
+      box.style.borderColor = 'transparent';
+    } else {
+      kwArray.forEach(kw => {
+        const pill = document.createElement('span');
+        pill.style.cssText = 'background:var(--blue300);color:var(--blue600);padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;font-style:normal;white-space:nowrap;';
+        pill.textContent = kw;
+        box.appendChild(pill);
+      });
+      box.style.borderColor = 'var(--state-green)';
+    }
+    const badge = document.getElementById('kwCountBadge');
+    badge.style.display = kwArray.length > 0 ? 'inline' : 'none';
+    badge.textContent   = kwArray.length + ' / 14';
+    badge.style.background = kwArray.length >= 14 ? 'var(--orange)' : 'var(--state-green)';
+  }
+
+  // ── SKIP KEYWORDS ──
+  function skipKeywords() {
+    const kwBox = document.getElementById('keywordsBox');
+    kwBox.style.color = 'var(--gray500)';
+    kwBox.style.fontStyle = 'italic';
+    kwBox.style.borderColor = 'transparent';
+    kwBox.textContent = 'Skipped – enter keywords manually in Additional AI Instructions';
+    document.getElementById('skipKwBtn').style.display = 'none';
+    // Allow pipeline to proceed even without keywords
+    if (currentStatus === 'blue') setStatus('orange');
+    logLine('SEO Keywords step skipped – entering Blue → Orange manually', 'warn');
+    updateSubmitBtn();
+  }
+
   // ── LANGUAGE CHANGE → load CB workflows ──
   function onLanguageChange() {
     const lang = document.getElementById('targetLanguage').value;
@@ -1117,9 +1367,10 @@
   }
   function saveDevConfig() {
     sessionStorage.setItem('bike24_cfg', JSON.stringify({
-      cbApiToken:   document.getElementById('cbApiToken').value.trim(),
-      refWebhook:   document.getElementById('refWebhook').value.trim(),
-      step1Webhook: document.getElementById('step1Webhook').value.trim(),
+      cbApiToken:    document.getElementById('cbApiToken').value.trim(),
+      refWebhook:    document.getElementById('refWebhook').value.trim(),
+      step1Webhook:  document.getElementById('step1Webhook').value.trim(),
+      kwSyncWebhook: document.getElementById('kwSyncWebhook').value.trim(),
     }));
     const msg = document.getElementById('devSaveMsg');
     msg.style.display = 'inline';
