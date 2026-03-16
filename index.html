@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BIKE24 · Translation Pipeline</title>
-  <!-- v3.0 – Two-stage Status Check, 4-state Ampel, Create Duplicate, Re-translate -->
+  <!-- v2.1 – Status Check updated: language flags via n8n reference check -->
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -14,11 +14,9 @@
       --blue600: #004370;
       --blue500: #0654C4;
       --blue300: #BFE0F5;
-      --blue100: #E8F4FF;
       --red:     #E00038;
       --green:   #168749;
       --orange:  #F59E0B;
-      --violet:  #7C3AED;
       --gray600: #252936;
       --gray500: #506688;
       --gray100: #F1F5F9;
@@ -26,134 +24,151 @@
       --radius:  10px;
       --shadow:  0 4px 24px rgba(0,114,232,0.09);
       --topbar-h: 88px;
-
-      /* 4-state Ampel colors */
-      --state-red:    #E00038;
-      --state-blue:   #0072E8;
-      --state-orange: #F59E0B;
-      --state-green:  #168749;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; font-weight: 500; background: var(--gray100); min-height: 100vh; color: var(--dark); }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      background: var(--gray100);
+      min-height: 100vh;
+      color: var(--dark);
+    }
 
     /* ══ TOPBAR ══ */
-    .topbar { background: var(--dark); padding: 0 40px; height: var(--topbar-h); display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--blue); }
-    .topbar-logo svg { height: calc(var(--topbar-h) * 0.66); width: auto; display: block; }
+    .topbar {
+      background: var(--dark);
+      padding: 0 40px;
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--blue);
+    }
+    .topbar-logo svg {
+      height: calc(var(--topbar-h) * 0.66);
+      width: auto;
+      display: block;
+    }
     .topbar-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-    .topbar-label { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue300); }
+    .topbar-label {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 11px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--blue300);
+    }
     .topbar-sub { font-size: 11px; color: var(--gray500); }
 
     /* ══ HERO ══ */
-    .hero { background: var(--blue); padding: 20px 40px 18px; display: flex; align-items: center; gap: 14px; }
-    .hero h1 { font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 26px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--white); line-height: 1; }
+    .hero {
+      background: var(--blue);
+      padding: 20px 40px 18px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .hero h1 {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 900; font-size: 26px;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--white); line-height: 1;
+    }
     .hero h1 span { color: var(--yellow); }
     .hero-sep { width: 3px; height: 26px; background: rgba(255,255,255,0.28); border-radius: 2px; flex-shrink: 0; }
     .hero-sub { font-size: 12px; color: var(--blue300); }
 
-    /* ══ GRID ══ */
-    .page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 30px 32px 60px; align-items: start; }
-    .col-left  { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 24px; }
-    .col-right { display: flex; flex-direction: column; gap: 18px; }
+    /* ══ TWO-COLUMN GRID ══ */
+    .page-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 30px 32px 60px;
+      align-items: start;
+    }
 
-    /* ══ CARD ══ */
-    .card { background: var(--white); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
-    .card-header { padding: 11px 20px; display: flex; align-items: center; gap: 10px; }
+    /* ══ SHARED CARD ══ */
+    .card {
+      background: var(--white);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 11px 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
     .card-header.navy   { background: var(--dark); }
     .card-header.cobalt { background: var(--blue600); }
     .card-header.slate  { background: var(--gray600); }
-    .card-header h2 { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--white); flex: 1; }
-    .step-badge { background: var(--yellow); color: var(--dark); font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 10px; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.07em; }
+    .card-header h2 {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 11px;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--white);
+    }
+    .step-badge {
+      background: var(--yellow); color: var(--dark);
+      font-family: 'Barlow', sans-serif;
+      font-weight: 900; font-size: 10px;
+      padding: 2px 7px; border-radius: 4px;
+      letter-spacing: 0.07em;
+    }
     .card-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
 
-    /* ══ FORM ══ */
+    /* ══ LEFT COLUMN – stacks all 3 status cards ══ */
+    .col-left  { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 24px; }
+    .col-right { display: flex; flex-direction: column; gap: 18px; }
+
+    /* ══ FORM FIELDS ══ */
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .field { display: flex; flex-direction: column; gap: 5px; }
-    .field label { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray500); }
+    .field label {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray500);
+    }
     .field label .req { color: var(--red); margin-left: 2px; }
-    input[type="url"], input[type="text"], select { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px; color: var(--dark); background: var(--gray100); border: 2px solid transparent; border-radius: var(--radius); padding: 9px 12px; width: 100%; transition: border-color 0.2s, background 0.2s; appearance: none; }
-    input[type="url"]:focus, input[type="text"]:focus, select:focus { outline: none; border-color: var(--blue); background: var(--white); }
-    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23506688' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+    input[type="url"], input[type="text"], select {
+      font-family: 'Inter', sans-serif;
+      font-weight: 500; font-size: 13px;
+      color: var(--dark); background: var(--gray100);
+      border: 2px solid transparent; border-radius: var(--radius);
+      padding: 9px 12px; width: 100%;
+      transition: border-color 0.2s, background 0.2s;
+      appearance: none;
+    }
+    input[type="url"]:focus, input[type="text"]:focus, select:focus {
+      outline: none; border-color: var(--blue); background: var(--white);
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23506688' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px;
+    }
     .help { font-size: 11px; color: var(--gray500); font-style: italic; }
     .divider { height: 1px; background: var(--gray100); }
 
-    /* ══ BUTTONS ══ */
+    /* ══ STATUS CHECK FIELDS ══ */
+    .status-fields { display: flex; flex-direction: column; gap: 10px; }
+
+    /* ══ CHECK BUTTON ══ */
     .btn-check {
-      font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 11px;
+      font-family: 'Barlow', sans-serif;
+      font-weight: 900; font-size: 11px;
       letter-spacing: 0.1em; text-transform: uppercase;
       color: var(--dark); background: var(--yellow);
       border: none; border-radius: var(--radius);
       padding: 10px 16px; cursor: pointer;
       transition: background 0.2s, transform 0.1s;
-      align-self: flex-start; white-space: nowrap;
+      align-self: flex-start;
+      white-space: nowrap;
     }
-    .btn-check:hover:not(:disabled) { background: #e8bc00; transform: translateY(-1px); }
-    .btn-check:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-check:hover { background: #e8bc00; transform: translateY(-1px); }
+    .btn-check:active { transform: translateY(0); }
 
-    .btn-action {
-      font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 10px;
-      letter-spacing: 0.09em; text-transform: uppercase;
-      border: none; border-radius: 7px;
-      padding: 8px 14px; cursor: pointer;
-      transition: background 0.2s, transform 0.1s, opacity 0.2s;
-      white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;
-    }
-    .btn-action:hover:not(:disabled) { transform: translateY(-1px); }
-    .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-create-dup  { background: var(--blue);   color: var(--white); }
-    .btn-create-dup:hover:not(:disabled)  { background: var(--blue500); }
-    .btn-retranslate { background: var(--orange);  color: var(--white); }
-    .btn-retranslate:hover:not(:disabled) { background: #d97706; }
-
-    /* ══ LANGUAGE PILLS ══ */
-    .lang-grid { display: flex; flex-direction: column; gap: 8px; }
-    .lang-grid-label { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray500); }
-    .lang-pills { display: flex; flex-wrap: wrap; gap: 7px; }
-
-    .lang-pill {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 13px;
-      border: 2px solid transparent; border-radius: 9px;
-      cursor: pointer; text-decoration: none; color: var(--dark);
-      transition: border-color 0.18s, background 0.18s, transform 0.12s, opacity 0.25s;
-      position: relative; background: var(--gray100);
-    }
-    /* dimmed – before any check */
-    .lang-pill.dimmed { opacity: 0.28; pointer-events: none; }
-    /* found – has a duplicate */
-    .lang-pill.found  { opacity: 1; }
-    .lang-pill.found:hover { border-color: var(--blue); background: #e8f2fd; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,114,232,0.15); }
-    .lang-pill.found.selected { border-color: var(--blue); background: #e8f2fd; box-shadow: 0 0 0 3px rgba(0,114,232,0.15); }
-    /* not-found – no duplicate yet */
-    .lang-pill.not-found { opacity: 1; border-style: dashed; border-color: #c4ccd8; }
-    .lang-pill.not-found:hover { border-color: var(--red); background: #fff0f3; transform: translateY(-2px); }
-    .lang-pill.not-found.selected { border-color: var(--red); background: #fff0f3; box-shadow: 0 0 0 3px rgba(224,0,56,0.12); }
-
-    .lang-pill-flag { font-size: 20px; line-height: 1; }
-    .lang-pill-code { font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray500); }
-    .lang-pill.found:hover .lang-pill-code,
-    .lang-pill.found.selected .lang-pill-code { color: var(--blue); }
-    .lang-pill.not-found .lang-pill-code { color: #c4ccd8; }
-    .lang-pill.not-found:hover .lang-pill-code,
-    .lang-pill.not-found.selected .lang-pill-code { color: var(--red); }
-
-    /* tooltip */
-    .lang-pill::after { content: attr(data-title); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--dark); color: var(--white); font-family: 'Inter', sans-serif; font-size: 11px; padding: 4px 9px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 20; }
-    .lang-pill:hover::after { opacity: 1; }
-
-    /* ══ STAGE 2 ══ */
-    .selected-doc-box {
-      background: var(--blue100); border: 1px solid var(--blue300);
-      border-radius: 9px; padding: 10px 13px;
-      display: flex; flex-direction: column; gap: 5px;
-    }
-    .selected-doc-box .doc-label { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue500); }
-    .selected-doc-box .doc-title { font-size: 12px; color: var(--dark); font-weight: 600; }
-    .selected-doc-box .doc-url   { font-size: 11px; }
-    .selected-doc-box .doc-url a { color: var(--blue); text-decoration: none; }
-    .selected-doc-box .doc-url a:hover { text-decoration: underline; }
-    .selected-doc-empty { font-size: 11px; color: var(--gray500); font-style: italic; padding: 10px 0; }
-
-    /* ══ 4-STATE AMPEL ══ */
+    /* ══ AMPEL ROWS ══ */
     .ampel-rows { display: flex; flex-direction: column; gap: 8px; }
     .ampel-row {
       display: flex; align-items: center; gap: 10px;
@@ -161,117 +176,407 @@
       background: var(--gray100); border: 2px solid transparent;
       transition: all 0.35s;
     }
-    .ampel-row.active-red    { background: #fff0f3; border-color: var(--state-red); }
-    .ampel-row.active-blue   { background: #e8f4ff; border-color: var(--state-blue); }
-    .ampel-row.active-orange { background: #fffbeb; border-color: var(--state-orange); }
-    .ampel-row.active-green  { background: #edfaf3; border-color: var(--state-green); }
+    .ampel-row.active-red    { background: #fff0f3; border-color: var(--red); }
+    .ampel-row.active-orange { background: #fffbeb; border-color: var(--orange); }
+    .ampel-row.active-green  { background: #edfaf3; border-color: var(--green); }
 
-    .a-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; background: #c4ccd8; transition: background 0.35s, box-shadow 0.35s; }
-    .active-red    .a-dot { background: var(--state-red);    box-shadow: 0 0 0 4px rgba(224,0,56,0.15); }
-    .active-blue   .a-dot { background: var(--state-blue);   box-shadow: 0 0 0 4px rgba(0,114,232,0.15); }
-    .active-orange .a-dot { background: var(--state-orange); box-shadow: 0 0 0 4px rgba(245,158,11,0.15); }
-    .active-green  .a-dot { background: var(--state-green);  box-shadow: 0 0 0 4px rgba(22,135,73,0.15); }
+    .a-dot {
+      width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+      background: #c4ccd8; transition: background 0.35s, box-shadow 0.35s;
+    }
+    .active-red    .a-dot { background: var(--red);    box-shadow: 0 0 0 4px rgba(224,0,56,0.15); }
+    .active-orange .a-dot { background: var(--orange); box-shadow: 0 0 0 4px rgba(245,158,11,0.15); }
+    .active-green  .a-dot { background: var(--green);  box-shadow: 0 0 0 4px rgba(22,135,73,0.15); }
 
-    .a-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-    .a-title { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray500); transition: color 0.35s; }
-    .active-red    .a-title { color: var(--state-red); }
-    .active-blue   .a-title { color: var(--state-blue); }
+    .a-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .a-title {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--gray500); transition: color 0.35s;
+    }
+    .active-red    .a-title { color: var(--red); }
     .active-orange .a-title { color: #92400e; }
-    .active-green  .a-title { color: var(--state-green); }
+    .active-green  .a-title { color: var(--green); }
     .a-desc { font-size: 10px; color: var(--gray500); line-height: 1.3; }
 
-    /* action buttons inside ampel rows */
-    .a-actions { display: none; margin-top: 6px; gap: 6px; flex-wrap: wrap; }
-    .ampel-row.active-red    .a-actions-red    { display: flex; }
-    .ampel-row.active-green  .a-actions-green  { display: flex; }
-
-    /* ══ PIPELINE ══ */
+    /* ══ PIPELINE VERTICAL ══ */
     .pipeline-steps { display: flex; flex-direction: column; }
-    .pv-step { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; position: relative; transition: opacity 0.3s; }
+    .pv-step {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; position: relative;
+      transition: opacity 0.3s;
+    }
     .pv-step.locked { opacity: 0.35; }
-    .pv-step:not(:last-child)::after { content: ''; position: absolute; left: 9px; top: 26px; bottom: -8px; width: 2px; background: #dde2ea; }
-    .pv-step.done::after   { background: var(--state-green); }
-    .pv-step.active::after { background: var(--state-orange); }
-    .pv-dot { width: 20px; height: 20px; border-radius: 50%; background: #c4ccd8; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--white); transition: background 0.35s; margin-top: 1px; }
-    .pv-step.done   .pv-dot { background: var(--state-green); }
-    .pv-step.active .pv-dot { background: var(--state-orange); }
+    .pv-step:not(:last-child)::after {
+      content: '';
+      position: absolute; left: 9px; top: 26px; bottom: -8px;
+      width: 2px; background: #dde2ea;
+    }
+    .pv-step.done::after   { background: var(--green); }
+    .pv-step.active::after { background: var(--orange); }
+
+    .pv-dot {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #c4ccd8; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 800; color: var(--white);
+      transition: background 0.35s; margin-top: 1px;
+    }
+    .pv-step.done   .pv-dot { background: var(--green); }
+    .pv-step.active .pv-dot { background: var(--orange); }
+
     .pv-info { display: flex; flex-direction: column; gap: 1px; }
-    .pv-label { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray500); }
-    .pv-step.done   .pv-label { color: var(--state-green); }
+    .pv-label {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--gray500);
+    }
+    .pv-step.done   .pv-label { color: var(--green); }
     .pv-step.active .pv-label { color: #92400e; }
     .pv-status { font-size: 10px; color: var(--gray500); }
 
-    /* ══ RIGHT COLUMN ══ */
-    .file-drop { border: 2px dashed var(--blue300); border-radius: var(--radius); background: #f0f6ff; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+    /* ══ FILE DROP ══ */
+    .file-drop {
+      border: 2px dashed var(--blue300); border-radius: var(--radius);
+      background: #f0f6ff; padding: 16px; text-align: center;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
     .file-drop:hover { border-color: var(--blue); background: #e6f0fd; }
     .file-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
     .file-drop-icon { font-size: 20px; margin-bottom: 4px; }
-    .file-drop-text { font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 11px; color: var(--blue); text-transform: uppercase; letter-spacing: 0.06em; }
+    .file-drop-text {
+      font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 11px;
+      color: var(--blue); text-transform: uppercase; letter-spacing: 0.06em;
+    }
     .file-drop-sub { font-size: 10px; color: var(--gray500); margin-top: 2px; }
-    #fileInfo { margin-top: 7px; font-size: 11px; color: var(--blue600); background: var(--blue300); border-radius: 6px; padding: 6px 10px; display: none; }
+    #fileInfo {
+      margin-top: 7px; font-size: 11px; color: var(--blue600);
+      background: var(--blue300); border-radius: 6px; padding: 6px 10px; display: none;
+    }
+
+    /* ══ RADIO GROUP ══ */
     .radio-group { display: flex; flex-direction: column; gap: 7px; }
-    .radio-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 13px; border: 2px solid var(--gray100); border-radius: var(--radius); cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+    .radio-option {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 13px; border: 2px solid var(--gray100);
+      border-radius: var(--radius); cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
     .radio-option:hover  { border-color: var(--blue300); background: #f5f9ff; }
     .radio-option.selected { border-color: var(--blue); background: #f0f6ff; }
     .radio-option input[type="radio"] { margin-top: 2px; accent-color: var(--blue); width: 14px; height: 14px; flex-shrink: 0; }
     .ro-label { font-size: 13px; color: var(--dark); font-weight: 500; }
     .ro-sub   { font-size: 10px; color: var(--gray500); margin-top: 1px; }
-    .cb-input-box { display: none; margin-top: 9px; padding: 12px; background: var(--gray100); border-radius: var(--radius); border-left: 3px solid var(--blue); }
+
+    .cb-input-box {
+      display: none; margin-top: 9px; padding: 12px;
+      background: var(--gray100); border-radius: var(--radius);
+      border-left: 3px solid var(--blue);
+    }
     .cb-input-box.active { display: block; }
 
-    /* ══ SUBMIT ══ */
-    .btn-submit { width: 100%; padding: 15px; background: var(--blue); color: var(--white); border: none; border-radius: var(--radius); font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .btn-submit:hover:not(:disabled) { background: var(--blue500); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,114,232,0.25); }
+    /* ══ SUBMIT BUTTON ══ */
+    .btn-submit {
+      width: 100%; padding: 15px;
+      background: var(--blue); color: var(--white);
+      border: none; border-radius: var(--radius);
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;
+      cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: var(--blue500); transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,114,232,0.25);
+    }
+    .btn-submit:active:not(:disabled) { transform: translateY(0); }
     .btn-submit:disabled { background: #adbdcc; cursor: not-allowed; opacity: 0.65; }
     .btn-arrow { font-size: 17px; transition: transform 0.2s; }
     .btn-submit:hover:not(:disabled) .btn-arrow { transform: translateX(4px); }
-    .submit-hint { text-align: center; font-size: 11px; color: var(--gray500); font-style: italic; margin-top: -6px; }
+
+    /* disabled hint */
+    .submit-hint {
+      text-align: center; font-size: 11px;
+      color: var(--gray500); font-style: italic;
+      margin-top: -6px;
+    }
     .submit-hint.hidden { display: none; }
+
+    /* ══ TOAST ══ */
+    .toast {
+      display: none; position: fixed; bottom: 28px; right: 28px;
+      background: var(--green); color: var(--white);
+      font-family: 'Barlow', sans-serif; font-weight: 800;
+      font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 12px 20px; border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18); z-index: 999;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
 
     /* ══ DEV CARD ══ */
     .dev-card { border: 1px solid #21262d; }
-    .dev-head { background: #0d1117 !important; border-bottom: 1px solid #21262d; cursor: pointer; }
+    .dev-head { background: #0d1117 !important; border-bottom: 1px solid #21262d; }
     .dev-head h2 { color: #506688 !important; }
+    .dev-head:hover h2 { color: var(--blue300) !important; }
+    .dev-head .step-badge { display: none; }
 
-    /* ══ LOG ══ */
-    .log-wrap { max-width: 1100px; margin: 0 auto; padding: 0 32px 48px; }
-    .log-card { background: var(--dark); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
-    .log-header { display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; background: var(--gray600); border-bottom: 1px solid rgba(255,255,255,0.07); }
+    /* ══ WORKFLOW LOG ══ */
+    .log-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 32px 48px;
+    }
+    .log-card {
+      background: var(--dark);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    }
+    .log-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 18px;
+      background: var(--gray600);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
     .log-header-left { display: flex; align-items: center; gap: 9px; }
-    .log-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gray500); transition: background 0.4s, box-shadow 0.4s; flex-shrink: 0; }
+    .log-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--gray500);
+      transition: background 0.4s, box-shadow 0.4s; flex-shrink: 0;
+    }
     .log-dot.running { background: var(--yellow); box-shadow: 0 0 0 3px rgba(255,209,5,0.2); animation: pulse 1.2s infinite; }
-    .log-dot.done    { background: var(--state-green); box-shadow: 0 0 0 3px rgba(22,135,73,0.2); }
-    .log-dot.error   { background: var(--state-red);   box-shadow: 0 0 0 3px rgba(224,0,56,0.2); }
+    .log-dot.done    { background: var(--green);  box-shadow: 0 0 0 3px rgba(22,135,73,0.2); }
+    .log-dot.error   { background: var(--red);    box-shadow: 0 0 0 3px rgba(224,0,56,0.2); }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    .log-title { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue300); }
-    .log-status { font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray500); transition: color 0.3s; }
+    .log-title {
+      font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 10px;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue300);
+    }
+    .log-status {
+      font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 10px;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--gray500); transition: color 0.3s;
+    }
     .log-status.running { color: var(--yellow); }
-    .log-status.done    { color: var(--state-green); }
-    .log-status.error   { color: var(--state-red); }
-    .log-body { padding: 16px 18px; min-height: 140px; max-height: 260px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.7; color: #8ba3bf; display: flex; flex-direction: column; gap: 2px; }
+    .log-status.done    { color: var(--green); }
+    .log-status.error   { color: var(--red); }
+    .log-body {
+      padding: 16px 18px; min-height: 140px; max-height: 260px;
+      overflow-y: auto;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px; line-height: 1.7; color: #8ba3bf;
+      display: flex; flex-direction: column; gap: 2px;
+    }
     .log-body::-webkit-scrollbar { width: 6px; }
+    .log-body::-webkit-scrollbar-track { background: transparent; }
     .log-body::-webkit-scrollbar-thumb { background: var(--gray600); border-radius: 3px; }
-    .log-placeholder { color: #3d4f62; font-style: italic; font-size: 11px; margin: auto; text-align: center; }
+    .log-placeholder {
+      color: #3d4f62; font-style: italic; font-size: 11px;
+      margin: auto; text-align: center;
+    }
     .log-line { display: flex; gap: 10px; align-items: baseline; }
     .log-time { color: #3d5a73; flex-shrink: 0; font-size: 11px; }
     .log-icon { flex-shrink: 0; }
+    .log-msg  { color: #8ba3bf; }
     .log-line.info  .log-msg { color: #8ba3bf; }
     .log-line.ok    .log-msg { color: #4ade80; }
     .log-line.warn  .log-msg { color: #fbbf24; }
     .log-line.error .log-msg { color: #f87171; }
     .log-line.step  .log-msg { color: #60a5fa; font-weight: 600; }
 
-    /* ══ TOAST ══ */
-    .toast { display: none; position: fixed; bottom: 28px; right: 28px; background: var(--state-green); color: var(--white); font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 20px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); z-index: 999; animation: slideUp 0.3s ease; }
-    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
+    /* ══ RESPONSIVE ══ */
     @media (max-width: 820px) {
       .page-grid { grid-template-columns: 1fr; padding: 20px 16px 50px; }
-      .col-left { position: static; }
-      .form-row { grid-template-columns: 1fr; }
-      .topbar { padding: 0 20px; }
-      .hero { padding: 16px 20px; }
+      .col-left  { position: static; }
+      .form-row  { grid-template-columns: 1fr; }
+      .topbar    { padding: 0 20px; }
+      .hero      { padding: 16px 20px; }
     }
+
+    /* ══ LANGUAGE FLAGS ══ */
+    .lang-area { display: none; flex-direction: column; gap: 8px; }
+    .lang-area.visible { display: flex; }
+    .lang-area-label {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray500);
+    }
+    .lang-flags { display: flex; flex-wrap: wrap; gap: 7px; }
+    .lang-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: var(--gray100);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer; text-decoration: none; color: var(--dark);
+      transition: border-color 0.18s, background 0.18s, transform 0.12s;
+      position: relative;
+    }
+    .lang-pill:hover {
+      border-color: var(--blue); background: #e8f2fd;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,114,232,0.15);
+    }
+    .lang-pill-flag { font-size: 20px; line-height: 1; }
+    .lang-pill-code {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 11px;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--gray500);
+    }
+    .lang-pill:hover .lang-pill-code { color: var(--blue); }
+    .lang-pill::after {
+      content: attr(data-title);
+      position: absolute; bottom: calc(100% + 6px);
+      left: 50%; transform: translateX(-50%);
+      background: var(--dark); color: var(--white);
+      font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+      padding: 4px 9px; border-radius: 6px;
+      white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s; z-index: 20;
+    }
+    .lang-pill:hover::after { opacity: 1; }
+    .lang-empty {
+      padding: 11px 13px; background: var(--gray100);
+      border: 2px dashed #c4ccd8; border-radius: var(--radius);
+      font-size: 11px; color: var(--gray500); font-style: italic;
+    }
+    .btn-check:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ══ LANG PILL SELECTED ══ */
+    .lang-pill.selected {
+      border-color: var(--blue); background: #e0eeff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,114,232,0.2);
+    }
+    .lang-pill.selected .lang-pill-code { color: var(--blue); }
+
+    /* ══ KEYWORD BLOCK ══ */
+    .kw-card { display: none; }
+    .kw-card.visible { display: block; }
+    .kw-lang-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px;
+    }
+    .kw-lang-flag { font-size: 22px; line-height: 1; }
+    .kw-lang-title {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 800; font-size: 13px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--dark);
+    }
+    .kw-doc-id {
+      font-size: 10px; color: var(--gray500);
+      background: var(--gray100); border-radius: 4px;
+      padding: 2px 7px; margin-left: auto;
+    }
+    .kw-actions {
+      display: flex; gap: 8px; margin-bottom: 14px;
+    }
+    .btn-kw {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 900; font-size: 10px;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      border: none; border-radius: 7px;
+      padding: 8px 14px; cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-kw:hover { transform: translateY(-1px); }
+    .btn-kw:active { transform: translateY(0); }
+    .btn-kw.from-cb {
+      background: var(--blue300); color: var(--blue600);
+    }
+    .btn-kw.from-cb:hover { background: #a8d4f0; }
+    .btn-kw.send-cb {
+      background: var(--orange); color: #78350f;
+    }
+    .btn-kw.send-cb:hover { background: #e08a00; }
+    .btn-kw:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .kw-list { display: flex; flex-direction: column; gap: 6px; }
+    .kw-row {
+      display: grid; grid-template-columns: 1fr auto;
+      align-items: center; gap: 10px;
+      padding: 8px 11px; background: var(--gray100);
+      border-radius: 8px; border: 1.5px solid transparent;
+    }
+    .kw-row.main-kw {
+      background: #f0f6ff; border-color: var(--blue300);
+    }
+    .kw-row-left { display: flex; flex-direction: column; gap: 2px; }
+    .kw-badge {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--blue500); margin-bottom: 1px;
+    }
+    .kw-row.main-kw .kw-badge { color: var(--blue); }
+    .kw-text {
+      font-size: 12px; color: var(--dark); font-weight: 500;
+      line-height: 1.3;
+    }
+    .kw-sv {
+      font-family: 'Barlow', sans-serif; font-weight: 800;
+      font-size: 11px; color: var(--gray500);
+      white-space: nowrap;
+    }
+    .kw-sv span { color: var(--dark); }
+    .kw-empty {
+      padding: 14px; background: var(--gray100);
+      border: 2px dashed #c4ccd8; border-radius: var(--radius);
+      font-size: 11px; color: var(--gray500); font-style: italic;
+      text-align: center;
+    }
+    .kw-loading {
+      padding: 14px; text-align: center;
+      font-size: 11px; color: var(--gray500); font-style: italic;
+    }
+
+    /* ══ AMPEL – IN TRANSLATION ══ */
+    .ampel-row.active-blue { background: #f0f6ff; border-color: var(--blue); }
+    .active-blue .a-dot { background: var(--blue); box-shadow: 0 0 0 4px rgba(0,114,232,0.15); }
+    .active-blue .a-title { color: var(--blue); }
+
+    /* ══ CONFIRM DIALOG ══ */
+    .confirm-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    .confirm-overlay.visible { display: flex; }
+    .confirm-box {
+      background: var(--white); border-radius: 14px;
+      padding: 24px; max-width: 360px; width: 90%;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.22);
+    }
+    .confirm-title {
+      font-family: 'Barlow', sans-serif; font-weight: 900;
+      font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--dark); margin-bottom: 10px;
+    }
+    .confirm-msg { font-size: 12px; color: var(--gray500); line-height: 1.5; margin-bottom: 18px; }
+    .confirm-msg strong { color: var(--dark); }
+    .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-confirm-yes {
+      font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 10px;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--red); color: white; border: none;
+      border-radius: 7px; padding: 9px 16px; cursor: pointer;
+    }
+    .btn-confirm-no {
+      font-family: 'Barlow', sans-serif; font-weight: 900; font-size: 10px;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--gray100); color: var(--gray500); border: none;
+      border-radius: 7px; padding: 9px 16px; cursor: pointer;
+    }
+
   </style>
 </head>
 <body>
@@ -303,20 +608,23 @@
 <!-- HERO -->
 <div class="hero">
   <h1>Translation <span>Pipeline</span></h1>
-  <div class="hero-sep"></div>
+  <div class="hero-sep" style="width:3px;height:26px;background:rgba(255,255,255,0.28);border-radius:2px;flex-shrink:0;"></div>
   <span class="hero-sub">Automated DE → Multilingual Content Workflow</span>
 </div>
 
+<!-- TWO-COLUMN GRID -->
 <div class="page-grid">
 
-  <!-- ════ LEFT COLUMN ════ -->
+  <!-- ════════════════════════
+       LEFT COLUMN
+  ════════════════════════ -->
   <div class="col-left">
 
     <!-- Developer Config -->
-    <div class="card dev-card">
-      <div class="card-header dev-head" onclick="toggleDev()">
+    <div class="card dev-card" id="devCard">
+      <div class="card-header dev-head" onclick="toggleDev()" style="cursor:pointer;">
         <span style="font-size:11px;margin-right:2px;">🔧</span>
-        <h2>Developer Config</h2>
+        <h2 style="flex:1;">Developer Config</h2>
         <span id="devChevron" style="font-size:10px;color:#506688;transition:transform 0.25s;">▼</span>
       </div>
       <div id="devPanel" style="display:none;">
@@ -324,129 +632,100 @@
           <div class="field">
             <label style="color:#506688;">ContentBird API Token</label>
             <div style="position:relative;">
-              <input type="password" id="cbApiToken" placeholder="Bearer xxxxxxxxxxxxxxxx" autocomplete="off" style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
-              <button onclick="toggleVis('cbApiToken',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;">👁</button>
+              <input type="password" id="cbApiToken" placeholder="Bearer xxxxxxxxxxxxxxxx" autocomplete="off"
+                style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
+              <button onclick="toggleVis('cbApiToken',this)" title="Show/hide"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
             </div>
           </div>
           <div class="field">
             <label style="color:#506688;">n8n Reference Check Webhook</label>
             <div style="position:relative;">
-              <input type="password" id="refWebhook" placeholder="https://bike24.app.n8n.cloud/webhook/bike24-reference-check" autocomplete="off" style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
-              <button onclick="toggleVis('refWebhook',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;">👁</button>
+              <input type="password" id="refWebhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/bike24-reference-check" autocomplete="off"
+                style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
+              <button onclick="toggleVis('refWebhook',this)" title="Show/hide"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
             </div>
           </div>
           <div class="field">
             <label style="color:#506688;">n8n Step 1 Translation Webhook</label>
             <div style="position:relative;">
-              <input type="password" id="step1Webhook" placeholder="https://bike24.app.n8n.cloud/webhook/bike24-translation-trigger" autocomplete="off" style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
-              <button onclick="toggleVis('step1Webhook',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;">👁</button>
-            </div>
-          </div>
-          <div class="field">
-            <label style="color:#506688;">n8n Keyword Sync Webhook</label>
-            <div style="position:relative;">
-              <input type="password" id="kwSyncWebhook" placeholder="https://bike24.app.n8n.cloud/webhook/bike24-keyword-sync" autocomplete="off" style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
-              <button onclick="toggleVis('kwSyncWebhook',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;">👁</button>
+              <input type="password" id="step1Webhook" placeholder="https://b24-intl.app.n8n.cloud/webhook/bike24-translation-trigger" autocomplete="off"
+                style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
+              <button onclick="toggleVis('step1Webhook',this)" title="Show/hide"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;line-height:1;">👁</button>
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button onclick="saveDevConfig()" style="font-family:'Barlow',sans-serif;font-weight:900;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;background:var(--blue);color:white;border:none;border-radius:7px;padding:9px 16px;cursor:pointer;">Save Config</button>
+            <button onclick="saveDevConfig()"
+              style="font-family:'Barlow',sans-serif;font-weight:900;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;background:var(--blue);color:white;border:none;border-radius:7px;padding:9px 16px;cursor:pointer;transition:background 0.2s;"
+              onmouseover="this.style.background='#0654C4'" onmouseout="this.style.background='var(--blue)'">
+              Save Config
+            </button>
             <span id="devSaveMsg" style="font-size:10px;color:#4ade80;display:none;">✓ Saved to session</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ══ STAGE 1 ══ -->
+    <!-- Status Check -->
     <div class="card">
       <div class="card-header slate">
-        <span style="font-size:13px;">🔍</span>
-        <h2>Stage 1 · Check for Duplicates</h2>
+        <h2>Status Check</h2>
       </div>
       <div class="card-body">
-        <div class="field">
-          <label>ContentBird Source URL <span class="req">*</span></label>
-          <input type="url" id="statusUrl" placeholder="https://bike24net.mycontentbird.io/creation/content/…" oninput="onUrlInput()">
-          <span class="help">Enter the DE source document URL</span>
-        </div>
-        <button class="btn-check" id="checkBtn" onclick="checkDuplicates()" disabled>🔍 Check for Duplicates</button>
-        <div class="lang-grid">
-          <div class="lang-grid-label">Target Languages</div>
-          <div class="lang-pills" id="langPills"></div>
+        <div class="status-fields">
+          <div class="field">
+            <label>ContentBird Source URL <span class="req">*</span></label>
+            <input type="url" id="statusUrl"
+              placeholder="https://bike24net.mycontentbird.io/creation/content/…"
+              oninput="onUrlInput()">
+          </div>
+          <!-- Language flags – appear after check -->
+          <div class="lang-area" id="langArea">
+            <div class="lang-area-label">Already duplicated into</div>
+            <div class="lang-flags" id="langFlags"></div>
+          </div>
+          <button class="btn-check" id="checkBtn" onclick="checkStatus()" disabled>▶ Check Status</button>
         </div>
       </div>
     </div>
 
-    <!-- ══ STAGE 2 ══ -->
+    <!-- Document Status (Ampel) -->
     <div class="card">
       <div class="card-header navy">
-        <span style="font-size:13px;">📄</span>
-        <h2>Stage 2 · Document Status</h2>
+        <h2>Document Status</h2>
       </div>
-      <div class="card-body" id="stage2Body" style="opacity:0.4;pointer-events:none;transition:opacity 0.35s;">
-
-        <!-- Selected doc display -->
-        <div id="selectedDocBox" class="selected-doc-box" style="display:none;">
-          <div class="doc-label">Selected Document</div>
-          <div class="doc-title" id="selectedDocTitle">—</div>
-          <div class="doc-url"><a id="selectedDocLink" href="#" target="_blank">Open in ContentBird ↗</a></div>
-        </div>
-        <div class="selected-doc-empty" id="selectedDocEmpty">← Select a language above to inspect a document</div>
-
-        <div class="divider"></div>
-
-        <!-- 4-State Ampel -->
+      <div class="card-body">
         <div class="ampel-rows">
-
-          <!-- RED: Not Duplicated -->
           <div class="ampel-row" id="lane-red">
             <div class="a-dot"></div>
-            <div class="a-main">
-              <div class="a-title">Not Duplicated</div>
+            <div class="a-text">
+              <div class="a-title">Not duplicated</div>
               <div class="a-desc">No target document found in ContentBird</div>
-              <div class="a-actions a-actions-red">
-                <button class="btn-action btn-create-dup" id="btnCreateDup" onclick="createDuplicate()">
-                  ➕ Create Duplicate
-                </button>
-              </div>
             </div>
           </div>
-
-          <!-- BLUE: Awaiting SEO Keywords -->
-          <div class="ampel-row" id="lane-blue">
-            <div class="a-dot"></div>
-            <div class="a-main">
-              <div class="a-title">Awaiting SEO Keywords</div>
-              <div class="a-desc">Document exists – waiting for keyword input</div>
-            </div>
-          </div>
-
-          <!-- ORANGE: In Translation -->
           <div class="ampel-row" id="lane-orange">
             <div class="a-dot"></div>
-            <div class="a-main">
-              <div class="a-title">In Translation</div>
-              <div class="a-desc">Translation pipeline active or in review</div>
+            <div class="a-text">
+              <div class="a-title">Awaiting SEO Keywords</div>
+              <div class="a-desc">Document exists – keywords not yet entered</div>
             </div>
           </div>
-
-          <!-- GREEN: Text Finished -->
+          <div class="ampel-row" id="lane-blue">
+            <div class="a-dot"></div>
+            <div class="a-text">
+              <div class="a-title">In Translation</div>
+              <div class="a-desc">Keywords found – review before starting</div>
+            </div>
+          </div>
           <div class="ampel-row" id="lane-green">
             <div class="a-dot"></div>
-            <div class="a-main">
-              <div class="a-title">Text Finished</div>
-              <div class="a-desc">Translation complete and published</div>
-              <div class="a-actions a-actions-green">
-                <button class="btn-action btn-retranslate" onclick="retranslate('update')">
-                  🔄 Re-translate (DE Update)
-                </button>
-                <button class="btn-action btn-retranslate" style="background:#0072E8;" onclick="retranslate('optimise')">
-                  ✨ Optimise Again
-                </button>
-              </div>
+            <div class="a-text">
+              <div class="a-title">Ready to translate</div>
+              <div class="a-desc">Keywords confirmed – pipeline can start</div>
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -458,45 +737,80 @@
       </div>
       <div class="card-body">
         <div class="pipeline-steps">
-          <div class="pv-step locked" id="ps1"><div class="pv-dot">1</div><div class="pv-info"><div class="pv-label">Duplicate document</div><div class="pv-status" id="ps1s">Pending</div></div></div>
-          <div class="pv-step locked" id="ps2"><div class="pv-dot">2</div><div class="pv-info"><div class="pv-label">SEO Keywords</div><div class="pv-status" id="ps2s">Pending</div></div></div>
-          <div class="pv-step locked" id="ps3"><div class="pv-dot">3</div><div class="pv-info"><div class="pv-label">Literal Translation</div><div class="pv-status" id="ps3s">Waiting</div></div></div>
-          <div class="pv-step locked" id="ps4"><div class="pv-dot">4</div><div class="pv-info"><div class="pv-label">Free Adaptation</div><div class="pv-status" id="ps4s">Waiting</div></div></div>
-          <div class="pv-step locked" id="ps5"><div class="pv-dot">5</div><div class="pv-info"><div class="pv-label">Terminology Check</div><div class="pv-status" id="ps5s">Waiting</div></div></div>
-          <div class="pv-step locked" id="ps6"><div class="pv-dot">6</div><div class="pv-info"><div class="pv-label">Proofread & Publish</div><div class="pv-status" id="ps6s">Waiting</div></div></div>
+          <div class="pv-step locked" id="ps1">
+            <div class="pv-dot">1</div>
+            <div class="pv-info">
+              <div class="pv-label">Duplicate document</div>
+              <div class="pv-status" id="ps1s">Pending</div>
+            </div>
+          </div>
+          <div class="pv-step locked" id="ps2">
+            <div class="pv-dot">2</div>
+            <div class="pv-info">
+              <div class="pv-label">SEO Keywords</div>
+              <div class="pv-status" id="ps2s">Pending</div>
+            </div>
+          </div>
+          <div class="pv-step locked" id="ps3">
+            <div class="pv-dot">3</div>
+            <div class="pv-info">
+              <div class="pv-label">Literal Translation</div>
+              <div class="pv-status" id="ps3s">Waiting</div>
+            </div>
+          </div>
+          <div class="pv-step locked" id="ps4">
+            <div class="pv-dot">4</div>
+            <div class="pv-info">
+              <div class="pv-label">Free Adaptation</div>
+              <div class="pv-status" id="ps4s">Waiting</div>
+            </div>
+          </div>
+          <div class="pv-step locked" id="ps5">
+            <div class="pv-dot">5</div>
+            <div class="pv-info">
+              <div class="pv-label">Terminology Check</div>
+              <div class="pv-status" id="ps5s">Waiting</div>
+            </div>
+          </div>
+          <div class="pv-step locked" id="ps6">
+            <div class="pv-dot">6</div>
+            <div class="pv-info">
+              <div class="pv-label">Proofread & Publish</div>
+              <div class="pv-status" id="ps6s">Waiting</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
   </div><!-- /col-left -->
 
-  <!-- ════ RIGHT COLUMN ════ -->
+
+  <!-- ════════════════════════
+       RIGHT COLUMN
+  ════════════════════════ -->
   <div class="col-right">
 
-    <!-- STEP 1: Workflow Configuration -->
+    <!-- STEP 1 -->
     <div class="card">
-      <div class="card-header cobalt"><span class="step-badge">STEP 1</span><h2>Workflow Configuration</h2></div>
+      <div class="card-header cobalt">
+        <span class="step-badge">STEP 1</span>
+        <h2>Workflow Configuration</h2>
+      </div>
       <div class="card-body">
         <div class="form-row">
           <div class="field">
-            <label>Target Language <span class="req">*</span></label>
-            <select id="targetLanguage" onchange="onLanguageChange()">
-              <option value="">— Select —</option>
-              <option value="en">EN – English</option>
-              <option value="es">ES – Spanish</option>
-              <option value="fr">FR – French</option>
-              <option value="it">IT – Italian</option>
-              <option value="nl">NL – Dutch</option>
-              <option value="pl">PL – Polish</option>
-              <option value="fi">FI – Finnish</option>
-              <option value="dk">DK – Danish</option>
-              <option value="si">SI – Slovenian</option>
+            <label>Workflow Mode <span class="req">*</span></label>
+            <select id="workflowMode" required>
+              <option value="">— Select mode —</option>
+              <option value="translation">🌍 Translation</option>
+              <option value="optimisation">✨ Optimisation</option>
             </select>
-            <span class="help">Syncs with Stage 1 language selection</span>
+            <span class="help">Translation = new language · Optimisation = rework</span>
           </div>
           <div class="field">
             <label>Text Type <span class="req">*</span></label>
-            <select id="textType" onchange="updateSubmitBtn()">
+            <select id="textType" required>
               <option value="">— Select type —</option>
               <option value="mp">MP – Manufacturer Page</option>
               <option value="cp">CP – Category Page</option>
@@ -513,726 +827,352 @@
             </select>
           </div>
         </div>
-        <div class="field">
-          <label>CB Workflow Template <span class="req">*</span></label>
-          <div style="position:relative;">
-            <select id="cbWorkflow" onchange="updateSubmitBtn()" disabled>
-              <option value="">— Select language first —</option>
-            </select>
-            <span id="cbWorkflowSpinner" style="display:none;position:absolute;right:36px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--gray500);">⏳</span>
-          </div>
-          <span class="help" id="cbWorkflowHelp">ContentBird workflows available for the selected language</span>
-        </div>
       </div>
     </div>
 
-    <!-- STEP 2: Translation Settings -->
+    <!-- STEP 2 -->
     <div class="card">
-      <div class="card-header cobalt"><span class="step-badge">STEP 2</span><h2>Translation Settings</h2></div>
+      <div class="card-header cobalt">
+        <span class="step-badge">STEP 2</span>
+        <h2>Source Document</h2>
+      </div>
       <div class="card-body">
-        <div class="form-row">
-          <div class="field">
-            <label>Target Persona <span class="req">*</span></label>
-            <select id="targetPersona" onchange="updateSubmitBtn()">
-              <option value="">— Select persona —</option>
-              <option value="frank">Frank</option>
-              <option value="mathias">Mathias</option>
-              <option value="simon">Simon</option>
-              <option value="sophia">Sophia</option>
-              <option value="thomas">Thomas</option>
-            </select>
-            <span class="help">Adapts tone and style to audience</span>
+        <div class="field">
+          <label>Word Documents <span class="req">*</span></label>
+          <div class="file-drop">
+            <input type="file" id="wordFiles" accept=".doc,.docx" multiple>
+            <div class="file-drop-icon">📄</div>
+            <div class="file-drop-text">Drop files or click to browse</div>
+            <div class="file-drop-sub">.doc · .docx · Multiple files supported</div>
           </div>
-          <div class="field">
-            <label>Writing Style <span class="req">*</span></label>
-            <select id="writingStyle" onchange="updateSubmitBtn()">
-              <option value="">— Select style —</option>
-              <option value="expert">🎓 Expert</option>
-              <option value="casual">💬 Casual</option>
-              <option value="seo">🔍 SEO-Fokus</option>
-              <option value="neutral">⚖️ Neutral</option>
-            </select>
-            <span class="help">Sets the linguistic register for Claude</span>
-          </div>
+          <div id="fileInfo"></div>
         </div>
 
         <div class="divider"></div>
 
         <div class="field">
-          <!-- ── MAIN KEYWORD ── -->
-          <label>Main Keyword
-            <span style="font-size:9px;background:var(--yellow);color:var(--dark);padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px;font-weight:900;">MAIN KW</span>
-            <span style="font-size:9px;background:var(--blue300);color:var(--blue600);padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:3px;font-style:normal;">FROM CB</span>
-          </label>
-          <div style="display:flex;gap:8px;align-items:stretch;">
-            <div style="flex:1;position:relative;">
-              <input type="text" id="mainKwInput" placeholder="e.g. gravel bike"
-                style="width:100%;padding-left:30px;font-size:13px;"
-                oninput="onMainKwInput()">
-              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;">⭐</span>
+          <label>ContentBird Source <span class="req">*</span></label>
+          <div class="radio-group">
+            <div class="radio-option" onclick="selectCB('create', this)">
+              <input type="radio" name="cbOption" value="create">
+              <div>
+                <div class="ro-label">📄 Create a new ContentBird file</div>
+                <div class="ro-sub">Start fresh in the target language project</div>
+              </div>
             </div>
-            <div style="width:80px;">
-              <input type="text" id="mainKwSv" placeholder="SV"
-                style="width:100%;font-size:13px;text-align:right;"
-                oninput="onMainKwInput()">
+            <div class="radio-option" onclick="selectCB('link', this)">
+              <input type="radio" name="cbOption" value="link">
+              <div>
+                <div class="ro-label">🔗 Use an existing ContentBird link</div>
+                <div class="ro-sub">Translate from an existing document</div>
+              </div>
             </div>
-          </div>
-          <span class="help" style="margin-bottom:4px;">Primary ranking keyword · fills "Main KW + SV" in sheet</span>
-
-          <!-- ── SECONDARY KEYWORDS ── -->
-          <label style="margin-top:8px;">Secondary Keywords
-            <span id="kwCountBadge" style="display:none;font-size:9px;background:var(--state-green);color:white;padding:1px 6px;border-radius:4px;margin-left:4px;">0 / 14</span>
-            <span style="font-size:9px;background:var(--blue300);color:var(--blue600);padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:3px;font-style:normal;">FROM CB</span>
-          </label>
-          <!-- Pill display -->
-          <div id="keywordsBox" onclick="enableKwEdit()" title="Click to add keywords"
-            style="background:var(--gray100);border:2px solid transparent;border-radius:var(--radius);padding:8px 12px;min-height:38px;cursor:pointer;transition:border-color 0.3s;display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
-            <span style="font-size:12px;color:var(--gray500);font-style:italic;">No secondary keywords yet</span>
-          </div>
-          <!-- Edit textarea -->
-          <textarea id="keywordsEdit" rows="3"
-            placeholder="KW2, KW3, KW4 … (comma-separated, max 14)"
-            style="display:none;font-family:'Inter',sans-serif;font-weight:500;font-size:12px;color:var(--dark);background:var(--white);border:2px solid var(--blue);border-radius:var(--radius);padding:9px 12px;width:100%;resize:vertical;line-height:1.6;"></textarea>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;gap:6px;flex-wrap:wrap;">
-            <span class="help" id="kwHelp">KW2–KW15 · click to edit and add more</span>
-            <div style="display:flex;gap:5px;">
-              <button id="skipKwBtn" onclick="skipKeywords()" style="display:none;font-family:'Barlow',sans-serif;font-weight:900;font-size:9px;letter-spacing:0.09em;text-transform:uppercase;background:var(--gray100);color:var(--gray500);border:1px solid #c4ccd8;border-radius:5px;padding:4px 10px;cursor:pointer;"
-                onmouseover="this.style.background='var(--orange)';this.style.color='white'" onmouseout="this.style.background='var(--gray100)';this.style.color='var(--gray500)'">
-                Skip
-              </button>
-              <button id="saveKwBtn" onclick="saveKeywords()" style="display:none;font-family:'Barlow',sans-serif;font-weight:900;font-size:9px;letter-spacing:0.09em;text-transform:uppercase;background:var(--blue);color:white;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;"
-                onmouseover="this.style.background='var(--blue500)'" onmouseout="this.style.background='var(--blue)'">
-                💾 Save to CB + Sheet
-              </button>
-              <button id="cancelKwBtn" onclick="cancelKwEdit()" style="display:none;font-family:'Barlow',sans-serif;font-weight:900;font-size:9px;letter-spacing:0.09em;text-transform:uppercase;background:var(--gray100);color:var(--gray500);border:1px solid #c4ccd8;border-radius:5px;padding:4px 10px;cursor:pointer;">
-                Cancel
-              </button>
+            <div class="radio-option" onclick="selectCB('duplicate', this)">
+              <input type="radio" name="cbOption" value="duplicate">
+              <div>
+                <div class="ro-label">🔄 Duplicate from ContentBird content</div>
+                <div class="ro-sub">Clone DE source into target language</div>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div class="field">
-          <label>Additional AI Instructions</label>
-          <textarea id="aiInstructions" rows="3"
-            placeholder="e.g. Focus on technical riders, avoid mentioning price, use short sentences…"
-            style="font-family:'Inter',sans-serif;font-weight:500;font-size:13px;color:var(--dark);background:var(--gray100);border:2px solid transparent;border-radius:var(--radius);padding:9px 12px;width:100%;resize:vertical;transition:border-color 0.2s,background 0.2s;line-height:1.5;"
-            onfocus="this.style.borderColor='var(--blue)';this.style.background='var(--white)'"
-            onblur="this.style.borderColor='transparent';this.style.background='var(--gray100)'"></textarea>
-          <span class="help">Optional extra context sent to Claude alongside the source text</span>
+          <div class="cb-input-box" id="cbLinkBox">
+            <div class="field">
+              <label>Existing Document URL</label>
+              <input type="url" id="cbLink" placeholder="https://bike24net.mycontentbird.io/…">
+              <span class="help">URL of the document to translate</span>
+            </div>
+          </div>
+          <div class="cb-input-box" id="cbDupBox">
+            <div class="field">
+              <label>Source Document URL (DE)</label>
+              <input type="url" id="cbDuplicate" placeholder="https://bike24net.mycontentbird.io/…">
+              <span class="help">A duplicate will be created in the target language project</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- STEP 3 -->
+    <div class="card">
+      <div class="card-header cobalt">
+        <span class="step-badge">STEP 3</span>
+        <h2>Translation Settings</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="field">
+            <label>Target Language <span class="req">*</span></label>
+            <select id="targetLanguage" required>
+              <option value="">— Select —</option>
+              <option value="fr">🇫🇷 French (FR)</option>
+              <option value="fr-be">🇧🇪 French (BE)</option>
+              <option value="it">🇮🇹 Italian (IT)</option>
+              <option value="es">🇪🇸 Spanish (ES)</option>
+              <option value="nl">🇳🇱 Dutch (NL)</option>
+              <option value="nl-be">🇧🇪 Dutch (BE)</option>
+              <option value="en">🇬🇧 English (UK)</option>
+              <option value="pl">🇵🇱 Polish (PL)</option>
+              <option value="cs">🇨🇿 Czech (CZ)</option>
+              <option value="da">🇩🇰 Danish (DK)</option>
+              <option value="fi">🇫🇮 Finnish (FI)</option>
+              <option value="sv">🇸🇪 Swedish (SE)</option>
+              <option value="no">🇳🇴 Norwegian (NO)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Target Persona <span class="req">*</span></label>
+            <select id="targetPersona" required>
+              <option value="">— Select persona —</option>
+              <option value="frank">👨‍💼 Frank</option>
+              <option value="mathias">🚴‍♂️ Mathias</option>
+              <option value="simon">🏃‍♂️ Simon</option>
+              <option value="sophia">🚴‍♀️ Sophia</option>
+              <option value="thomas">🛠️ Thomas</option>
+            </select>
+            <span class="help">Adapts tone and style to audience</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STEP 4 – SEO Keywords -->
+    <div class="card kw-card" id="kwCard">
+      <div class="card-header slate">
+        <h2>SEO Keywords</h2>
+      </div>
+      <div class="card-body" id="kwCardBody">
+        <div class="kw-lang-header" id="kwLangHeader"></div>
+        <div class="kw-actions">
+          <button class="btn-kw from-cb" id="btnFromCB" onclick="fetchFromCB()">▼ FROM CB</button>
+          <button class="btn-kw send-cb" id="btnSendCB" onclick="confirmSendToCB()">▲ SEND TO CB</button>
+        </div>
+        <div class="kw-list" id="kwList">
+          <div class="kw-empty">Select a language above to load keywords</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
     <button class="btn-submit" id="submitBtn" onclick="handleSubmit()" disabled>
-      <span>Start Translation Pipeline</span><span class="btn-arrow">→</span>
+      <span>Start Translation Pipeline</span>
+      <span class="btn-arrow">→</span>
     </button>
-    <p class="submit-hint" id="submitHint">Select a language in Stage 1 and reach Blue status to enable</p>
+    <p class="submit-hint" id="submitHint">Complete Status Check and reach GREEN status to enable</p>
 
-  </div>
-</div>
+  </div><!-- /col-right -->
 
-<!-- LOG -->
+</div><!-- /page-grid -->
+
+<!-- WORKFLOW LOG – full width below grid -->
 <div class="log-wrap">
   <div class="log-card">
     <div class="log-header">
-      <div class="log-header-left"><span class="log-dot" id="logDot"></span><span class="log-title">Workflow Log</span></div>
+      <div class="log-header-left">
+        <span class="log-dot" id="logDot"></span>
+        <span class="log-title">Workflow Log</span>
+      </div>
       <span class="log-status" id="logStatus">Idle</span>
     </div>
-    <div class="log-body" id="logBody"><div class="log-placeholder">— Pipeline not yet started. —</div></div>
+    <div class="log-body" id="logBody">
+      <div class="log-placeholder">— Pipeline not yet started. Trigger the workflow to see live progress here. —</div>
+    </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">✅ Pipeline triggered successfully!</div>
 
 <script>
-  // ── STATE ──
-  let currentStatus  = null;
-  let selectedLang   = null;
-  let selectedDocData = null;
-  let duplicatesData = [];
-  let sourceDocUrl   = '';
+  let currentStatus = null;
 
-  const ALL_LANGS = [
-    { code: 'en', cc: 'gb', label: 'EN' },
-    { code: 'es', cc: 'es', label: 'ES' },
-    { code: 'fr', cc: 'fr', label: 'FR' },
-    { code: 'it', cc: 'it', label: 'IT' },
-    { code: 'nl', cc: 'nl', label: 'NL' },
-    { code: 'pl', cc: 'pl', label: 'PL' },
-    { code: 'fi', cc: 'fi', label: 'FI' },
-    { code: 'dk', cc: 'dk', label: 'DK' },
-    { code: 'si', cc: 'si', label: 'SI' },
-  ];
-
-  const FLAG_EMOJI = { 'gb':'🇬🇧','es':'🇪🇸','fr':'🇫🇷','it':'🇮🇹','nl':'🇳🇱','pl':'🇵🇱','fi':'🇫🇮','dk':'🇩🇰','si':'🇸🇮','de':'🇩🇪','un':'🌐' };
-  function flagImg(cc) { return FLAG_EMOJI[(cc||'').toLowerCase()] || '🌐'; }
-
-  // CB Status → Ampel state mapping
-  function statusToAmpel(statusName, keywords) {
-    // If API already computed ampel, trust it
-    const s = (statusName || '').toLowerCase();
-    if (s.includes('veröffentlicht') || s.includes('published') || s.includes('approval')) return 'green';
-    if (s.includes('übersetzung') || s.includes('translation') || s.includes('editing') || s.includes('review')) return 'orange';
-    // Entwurf / Preparation / SEO Check → keywords decide
-    return (keywords && keywords.trim().length > 0) ? 'orange' : 'blue';
-  }
-
-  // CB type name → textType select value
-  function typeNameToValue(typeName) {
-    const map = {
-      'manufacturer page': 'mp', 'category page': 'cp',
-      'filter manufacturer page': 'f-mp', 'filter category page': 'f-cp',
-      'brand page': 'bp', 'newsletter': 'newsletter',
-      'email': 'email', 'product description': 'product',
-      'video': 'video', 'series': 'series', 'social': 'social'
+  function flagImg(cc) {
+    const emojiMap = {
+      'de':'🇩🇪','en':'🇬🇧','gb':'🇬🇧','fr':'🇫🇷','es':'🇪🇸','it':'🇮🇹',
+      'nl':'🇳🇱','pl':'🇵🇱','fi':'🇫🇮','be':'🇧🇪','cs':'🇨🇿','da':'🇩🇰',
+      'sv':'🇸🇪','no':'🇳🇴','un':'🌐'
     };
-    return map[(typeName||'').toLowerCase()] || '';
+    return emojiMap[(cc||'').toLowerCase()] || '🌐';
   }
+
+  const FLAG_MAP = {
+    'de':    { cc: 'de', label: 'DE' },
+    'en':    { cc: 'gb', label: 'EN' },
+    'fr':    { cc: 'fr', label: 'FR' },
+    'es':    { cc: 'es', label: 'ES' },
+    'it':    { cc: 'it', label: 'IT' },
+    'nl':    { cc: 'nl', label: 'NL' },
+    'pl':    { cc: 'pl', label: 'PL' },
+    'fi':    { cc: 'fi', label: 'FI' },
+    'cs':    { cc: 'cs', label: 'CZ' },
+    'da':    { cc: 'da', label: 'DK' },
+    'sv':    { cc: 'sv', label: 'SE' },
+    'no':    { cc: 'no', label: 'NO' },
+    'us':    { cc: 'us', label: 'US' },
+    'en-us': { cc: 'us', label: 'US' },
+    'fr-be': { cc: 'be', label: 'FR-BE' },
+    'nl-be': { cc: 'be', label: 'NL-BE' },
+  };
 
   // ── INIT ──
   window.addEventListener('DOMContentLoaded', () => {
-    renderAllPills('dimmed');
     const saved = sessionStorage.getItem('bike24_cfg');
     if (saved) {
       try {
         const cfg = JSON.parse(saved);
-        document.getElementById('cbApiToken').value    = cfg.cbApiToken    || '';
-        document.getElementById('refWebhook').value    = cfg.refWebhook    || '';
-        document.getElementById('step1Webhook').value  = cfg.step1Webhook  || '';
-        document.getElementById('kwSyncWebhook').value = cfg.kwSyncWebhook || '';
-        logLine('Developer config loaded from session', 'ok');
+        document.getElementById('cbApiToken').value   = cfg.cbApiToken   || '';
+        document.getElementById('refWebhook').value   = cfg.refWebhook   || '';
+        document.getElementById('step1Webhook').value = cfg.step1Webhook || '';
+        logLine('Developer config loaded from session · ready to connect', 'ok');
       } catch(e) {}
     }
   });
 
-  // ── RENDER PILLS ──
-  function renderAllPills(state) {
-    const box = document.getElementById('langPills');
-    box.innerHTML = '';
-    ALL_LANGS.forEach(lang => {
-      const found = duplicatesData.find(d => d.language.toLowerCase() === lang.code);
-      const pill  = document.createElement('div');
-      pill.className = 'lang-pill';
-
-      if (state === 'dimmed') {
-        pill.classList.add('dimmed');
-        pill.dataset.title = lang.label;
-      } else if (found) {
-        pill.classList.add('found');
-        if (selectedLang === lang.code) pill.classList.add('selected');
-        const tooltipParts = [found.title || lang.label];
-        if (found.statusName) tooltipParts.push((found.statusColor||'') + ' ' + found.statusName);
-        if (found.autor)      tooltipParts.push('👤 ' + found.autor);
-        pill.dataset.title = tooltipParts.join(' · ');
-        pill.onclick = () => selectLanguage(lang.code, found, pill);
-      } else {
-        pill.classList.add('not-found');
-        if (selectedLang === lang.code) pill.classList.add('selected');
-        pill.dataset.title = lang.label + ' – not duplicated yet';
-        pill.onclick = () => selectLanguage(lang.code, null, pill);
-      }
-
-      pill.innerHTML = '<span class="lang-pill-code">' + lang.label + '</span>';
-      box.appendChild(pill);
-    });
-  }
-
-  // ── SELECT LANGUAGE ──
-  function selectLanguage(code, docData, pillEl, skipDropdownSync = false) {
-    document.querySelectorAll('.lang-pill').forEach(p => p.classList.remove('selected'));
-    pillEl.classList.add('selected');
-    selectedLang    = code;
-    selectedDocData = docData;
-
-    // Activate Stage 2
-    const body = document.getElementById('stage2Body');
-    body.style.opacity = '1';
-    body.style.pointerEvents = 'auto';
-
-    // Show doc info
-    const box   = document.getElementById('selectedDocBox');
-    const empty = document.getElementById('selectedDocEmpty');
-
-    if (docData) {
-      box.style.display   = 'flex';
-      empty.style.display = 'none';
-      document.getElementById('selectedDocTitle').textContent = docData.title || '—';
-      document.getElementById('selectedDocLink').href = docData.docUrl;
-      // Use pre-computed ampel from API if available, else derive
-      const ampelState = docData.ampel || statusToAmpel(docData.statusName, docData.keywords);
-      setStatus(ampelState);
-      logLine('▶ Selected: ' + (docData.title || code.toUpperCase()), 'step');
-      if (docData.statusName) logLine('CB Status: ' + docData.statusName + (docData.keywords ? ' · Keywords: ' + docData.keywords : ' · No keywords yet'), 'info');
-
-      // Auto-fill Text Type
-      if (docData.typeName) {
-        const tv = typeNameToValue(docData.typeName);
-        const tt = document.getElementById('textType');
-        if (tv && tt) {
-          for (let i = 0; i < tt.options.length; i++) {
-            if (tt.options[i].value === tv) { tt.selectedIndex = i; break; }
-          }
-        }
-        if (!tv) logLine('Text Type "' + docData.typeName + '" not mapped – please select manually', 'warn');
-      }
-    } else {
-      box.style.display   = 'none';
-      empty.style.display = 'block';
-      empty.innerHTML = '⚠️ No duplicate found for <strong>' + code.toUpperCase() + '</strong>';
-      setStatus('red');
-      logLine('No duplicate found for ' + code.toUpperCase() + ' – use "Create Duplicate" to proceed', 'warn');
-    }
-
-    // Auto-set target language in Step 1 + load CB workflows
-    if (!skipDropdownSync) {
-      const sel = document.getElementById('targetLanguage');
-      if (sel) {
-        for (let i = 0; i < sel.options.length; i++) {
-          if (sel.options[i].value === code) { sel.selectedIndex = i; break; }
-        }
-      }
-    }
-    loadCbWorkflows(code);
-
-    // Update keywords fields
-    cancelKwEdit(); // reset edit mode on language switch
-    const kwBox = document.getElementById('keywordsBox');
-    if (docData && docData.keywords && docData.keywords.trim().length > 0) {
-      // Split: first keyword = Main KW, rest = secondary
-      const allKws = docData.keywords.split(',').map(k => k.trim()).filter(Boolean);
-      const mainKw = allKws[0] || '';
-      const secKws = allKws.slice(1);
-      // Fill main KW field
-      document.getElementById('mainKwInput').value = mainKw;
-      document.getElementById('mainKwSv').value    = docData.mainKwSv || '';
-      _currentMainKw = mainKw;
-      _currentMainSv = docData.mainKwSv || '';
-      // Fill secondary
-      _currentKwsFromCB = secKws.join(', ');
-      updateKwDisplay(secKws);
-    } else if (docData) {
-      // Doc exists but no keywords
-      document.getElementById('mainKwInput').value = '';
-      document.getElementById('mainKwSv').value    = '';
-      _currentMainKw = ''; _currentMainSv = '';
-      _currentKwsFromCB = '';
-      updateKwDisplay([]);
-      kwBox.innerHTML = '<span style="font-size:12px;color:var(--orange);font-style:italic;">⚠ No keywords yet · click to add or wait for SEO team</span>';
-      kwBox.style.borderColor = 'var(--orange)';
-    } else {
-      document.getElementById('mainKwInput').value = '';
-      document.getElementById('mainKwSv').value    = '';
-      _currentMainKw = ''; _currentMainSv = '';
-      _currentKwsFromCB = '';
-      kwBox.innerHTML = '<span style="font-size:12px;color:var(--gray500);font-style:italic;">No secondary keywords yet</span>';
-      kwBox.style.borderColor = 'transparent';
-      document.getElementById('kwCountBadge').style.display = 'none';
-    }
-
-    updateSubmitBtn();
-  }
-
   // ── URL INPUT ──
   function onUrlInput() {
     const url = document.getElementById('statusUrl').value.trim();
-    document.getElementById('checkBtn').disabled = !/\/content\/\d+/.test(url);
-    duplicatesData  = [];
-    selectedLang    = null;
-    selectedDocData = null;
-    renderAllPills('dimmed');
-    resetStage2();
+    const hasId = /\/content\/\d+/.test(url);
+    document.getElementById('checkBtn').disabled = !hasId;
+    document.getElementById('langArea').classList.remove('visible');
+    document.getElementById('langFlags').innerHTML = '';
   }
 
-  function resetStage2() {
-    const body = document.getElementById('stage2Body');
-    body.style.opacity = '0.4';
-    body.style.pointerEvents = 'none';
-    document.getElementById('selectedDocBox').style.display = 'none';
-    document.getElementById('selectedDocEmpty').style.display = 'block';
-    document.getElementById('selectedDocEmpty').innerHTML = '← Select a language above to inspect a document';
-    ['red','blue','orange','green'].forEach(s =>
-      document.getElementById('lane-' + s).classList.remove('active-red','active-blue','active-orange','active-green')
-    );
-    currentStatus = null;
-    updateSubmitBtn();
+  // ── RENDER FLAGS ──
+  let duplicatesData = []; // store full duplicates array after check
+  let selectedLang = null; // currently selected language object
+
+  function renderFlags(languages) {
+    duplicatesData = languages || [];
+    const area = document.getElementById('langArea');
+    const box  = document.getElementById('langFlags');
+    box.innerHTML = '';
+    if (!languages || languages.length === 0) {
+      area.classList.add('visible');
+      box.innerHTML = '<div class="lang-empty">No duplicates found yet for this document</div>';
+      return;
+    }
+    const langCount = {};
+    languages.forEach(l => { const c = (l.language||'').toLowerCase(); langCount[c] = (langCount[c]||0)+1; });
+
+    languages.forEach(lang => {
+      const code = (lang.language || '').toLowerCase();
+      const info = FLAG_MAP[code] || { cc: 'un', label: code.toUpperCase() };
+      const btn = document.createElement('button');
+      btn.className = 'lang-pill';
+      btn.dataset.title = lang.title || info.label;
+      btn.dataset.docId = lang.docId;
+      btn.dataset.lang  = code;
+      const idLabel = langCount[code] > 1 ? ' <span style="font-size:9px;opacity:0.7">#' + lang.docId + '</span>' : '';
+      btn.innerHTML = '<span class="lang-pill-flag">' + flagImg(info.cc || 'un') + '</span><span class="lang-pill-code">' + info.label + idLabel + '</span>';
+      btn.onclick = () => selectLangPill(lang, btn);
+      box.appendChild(btn);
+    });
+    area.classList.add('visible');
+    logLine('Duplicates: ' + languages.map(l => (FLAG_MAP[(l.language||'').toLowerCase()]||{label:l.language}).label).join(', '), 'ok');
   }
 
-  // ── CHECK FOR DUPLICATES ──
-  async function checkDuplicates() {
-    const url   = document.getElementById('statusUrl').value.trim();
-    const match = url.match(/\/content\/(\d+)/);
-    if (!match) return;
-    const contentId = match[1];
-    sourceDocUrl = url;
+  // ── SELECT LANG PILL ──
+  function selectLangPill(lang, btn) {
+    // Deselect all pills
+    document.querySelectorAll('.lang-pill').forEach(p => p.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedLang = lang;
 
-    const btn = document.getElementById('checkBtn');
-    btn.disabled = true; btn.textContent = '⏳ Checking…';
-    setLogState('running');
-    logLine('▶ Stage 1 · ContentBird Reference Check', 'step');
-    logLine('Source: ' + url, 'info');
+    // Show keyword card
+    document.getElementById('kwCard').classList.add('visible');
 
-    const cfg = getDevConfig();
+    // Update header
+    const code = (lang.language || '').toLowerCase();
+    const info = FLAG_MAP[code] || { cc: 'un', label: code.toUpperCase() };
+    document.getElementById('kwLangHeader').innerHTML =
+      '<span class="kw-lang-flag">' + flagImg(info.cc) + '</span>' +
+      '<span class="kw-lang-title">' + info.label + ' – ' + (lang.title || '') + '</span>' +
+      '<span class="kw-doc-id">ID ' + lang.docId + '</span>';
 
-    if (!cfg.refWebhook) {
-      logLine('No webhook → demo mode', 'warn');
-      await new Promise(r => setTimeout(r, 700));
-      duplicatesData = [
-        { language: 'en', docId: '20308', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20308', title: 'Y-Mount // MP EN', statusName: 'Übersetzung', statusColor: '🟠', autor: 'Markus B.' },
-        { language: 'es', docId: '20315', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20315', title: 'Y-Mount // MP ES', statusName: 'Veröffentlicht', statusColor: '🟢', autor: 'Markus B.' },
-        { language: 'nl', docId: '20304', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20304', title: 'Y-Mount // MP NL', statusName: 'Entwurf', statusColor: '⚪', autor: 'Markus B.' },
-        { language: 'pl', docId: '20305', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20305', title: 'Y-Mount // MP PL', statusName: 'Übersetzung', statusColor: '🟠', autor: 'Markus B.' },
-        { language: 'fi', docId: '20357', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20357', title: 'Y-Mount // MP FI', statusName: 'Übersetzung fertig', statusColor: '🟢', autor: 'Markus B.' },
-      ];
-      logLine(duplicatesData.length + ' duplicates found · FR & IT not yet created', 'ok');
-      renderAllPills('checked');
-      setLogState('done');
-      btn.disabled = false; btn.textContent = '🔍 Check for Duplicates';
+    // Load keywords from sheet data (already fetched during status check)
+    loadKeywordsFromSheet(lang.docId);
+  }
+
+  // ── LOAD KEYWORDS FROM SHEET ──
+  // sheetRows is populated during checkStatus from n8n response
+  let sheetRows = [];
+
+  function loadKeywordsFromSheet(docId) {
+    const list = document.getElementById('kwList');
+    list.innerHTML = '<div class="kw-loading">Loading keywords…</div>';
+
+    const normalId = String(parseInt(parseFloat(String(docId))));
+    const row = sheetRows.find(r => {
+      const rid = String(r['Target Doc ID'] || '').trim();
+      return String(parseInt(parseFloat(rid))) === normalId;
+    });
+
+    renderKeywords(row || null);
+
+    // Update ampel to "In Translation" if keywords found
+    const hasKw = row && (row['Main KW'] || row['KW2']);
+    if (hasKw) setStatus('blue');
+  }
+
+  function renderKeywords(row) {
+    const list = document.getElementById('kwList');
+    list.innerHTML = '';
+
+    if (!row) {
+      list.innerHTML = '<div class="kw-empty">No keywords found in Sheet for this document</div>';
       return;
     }
 
-    try {
-      const res = await fetch(cfg.refWebhook, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentId, cbUrl: url, cbApiToken: cfg.cbApiToken })
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const raw = await res.json();
-      const payload = Array.isArray(raw) ? (raw[0]?.json ?? raw[0]) : (raw?.json ?? raw);
-      duplicatesData = payload.languages || [];
-      logLine('Check complete · ' + (payload.count ?? duplicatesData.length) + ' duplicate(s) found', 'ok');
-      if (payload.sourceTitle) logLine('Source: ' + payload.sourceTitle, 'info');
-      renderAllPills('checked');
-      setLogState('done');
-    } catch(err) {
-      logLine('Check failed: ' + err.message, 'error');
-      setLogState('error');
-    } finally {
-      btn.disabled = false; btn.textContent = '🔍 Check for Duplicates';
+    const mainKw = (row['Main KW'] || '').trim();
+    const mainSv = (row['SV'] || row['Search Volume'] || '').toString().trim();
+
+    if (!mainKw) {
+      list.innerHTML = '<div class="kw-empty">No keywords entered yet for this document</div>';
+      return;
+    }
+
+    // Main KW
+    const mainRow = document.createElement('div');
+    mainRow.className = 'kw-row main-kw';
+    mainRow.innerHTML =
+      '<div class="kw-row-left"><div class="kw-badge">Main KW</div><div class="kw-text">' + escHtml(mainKw) + '</div></div>' +
+      (mainSv ? '<div class="kw-sv">SV <span>' + escHtml(mainSv) + '</span></div>' : '<div class="kw-sv"></div>');
+    list.appendChild(mainRow);
+
+    // KW2–KW15
+    for (let i = 2; i <= 15; i++) {
+      const kw = (row['KW' + i] || '').trim();
+      const sv = (row['SV' + i] || '').toString().trim();
+      if (!kw) continue;
+      const kwRow = document.createElement('div');
+      kwRow.className = 'kw-row';
+      kwRow.innerHTML =
+        '<div class="kw-row-left"><div class="kw-badge">KW ' + i + '</div><div class="kw-text">' + escHtml(kw) + '</div></div>' +
+        (sv ? '<div class="kw-sv">SV <span>' + escHtml(sv) + '</span></div>' : '<div class="kw-sv"></div>');
+      list.appendChild(kwRow);
     }
   }
 
-  // ── CREATE DUPLICATE ──
-  async function createDuplicate() {
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── FROM CB ──
+  async function fetchFromCB() {
     if (!selectedLang) return;
     const cfg = getDevConfig();
-    const btn = document.getElementById('btnCreateDup');
-    btn.disabled = true; btn.textContent = '⏳ Creating…';
-    setLogState('running');
-    logLine('▶ Creating duplicate for ' + selectedLang.toUpperCase() + '…', 'step');
+    const btn = document.getElementById('btnFromCB');
+    btn.disabled = true; btn.textContent = '⏳ Loading…';
+    logLine('FROM CB · Fetching keywords for doc ' + selectedLang.docId, 'step');
 
-    if (!cfg.step1Webhook) {
-      logLine('No Step 1 webhook → demo mode', 'warn');
-      await new Promise(r => setTimeout(r, 1200));
-      logLine('Duplicate created (demo) · reloading check…', 'ok');
-      btn.disabled = false; btn.textContent = '➕ Create Duplicate';
-      setLogState('done');
-      showToast('✅ Duplicate created for ' + selectedLang.toUpperCase());
-      return;
-    }
-
-    try {
-      const res = await fetch(cfg.step1Webhook, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'duplicate',
-          cbUrl: sourceDocUrl,
-          targetLanguage: selectedLang,
-          cbApiToken: cfg.cbApiToken
-        })
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      logLine('Duplicate created · running check again…', 'ok');
-      setLogState('done');
-      showToast('✅ Duplicate created for ' + selectedLang.toUpperCase());
-      // Re-run check to update pills
-      await checkDuplicates();
-    } catch(err) {
-      logLine('Create duplicate failed: ' + err.message, 'error');
-      setLogState('error');
-    } finally {
-      btn.disabled = false; btn.textContent = '➕ Create Duplicate';
-    }
-  }
-
-  // ── RE-TRANSLATE / OPTIMISE ──
-  async function retranslate(mode) {
-    if (!selectedDocData) return;
-    const cfg = getDevConfig();
-    setLogState('running');
-    logLine('▶ ' + (mode === 'update' ? 'Re-translate (DE Update)' : 'Optimise Again') + ' · ' + selectedLang.toUpperCase(), 'step');
-    logLine('Resetting status to Awaiting SEO Keywords…', 'info');
-
-    if (!cfg.step1Webhook) {
-      logLine('No webhook → demo mode', 'warn');
-      await new Promise(r => setTimeout(r, 800));
-      logLine('Status reset · document ready for new pipeline run', 'ok');
-      setStatus('blue');
-      setLogState('done');
-      showToast('🔄 Document reset to Awaiting SEO Keywords');
-      return;
-    }
-
-    try {
-      const res = await fetch(cfg.step1Webhook, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: mode === 'update' ? 'retranslate' : 'optimise',
-          targetDocId: selectedDocData.docId,
-          targetDocUrl: selectedDocData.docUrl,
-          targetLanguage: selectedLang,
-          cbApiToken: cfg.cbApiToken
-        })
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      logLine('Status reset to Übersetzung (ID 14)', 'ok');
-      setStatus('blue');
-      setLogState('done');
-      showToast('🔄 Document reset successfully');
-    } catch(err) {
-      logLine('Reset failed: ' + err.message, 'error');
-      setLogState('error');
-    }
-  }
-
-  // ── AMPEL ──
-  function setStatus(status) {
-    currentStatus = status;
-    // Show skip button only when awaiting keywords
-    const skipBtn = document.getElementById('skipKwBtn');
-    if (skipBtn) skipBtn.style.display = status === 'blue' ? 'inline-block' : 'none';
-    ['red','blue','orange','green'].forEach(s =>
-      document.getElementById('lane-' + s).classList.remove('active-red','active-blue','active-orange','active-green')
-    );
-    document.getElementById('lane-' + status).classList.add('active-' + status);
-
-    // Pipeline steps
-    const doneMap   = { red: 0, blue: 1, orange: 2, green: 6 };
-    const activeMap = { red: 0, blue: 1, orange: 2, green: -1 };
-    const labels    = {
-      red:    ['In progress','Pending','Waiting','Waiting','Waiting','Waiting'],
-      blue:   ['✓ Done','In progress','Waiting','Waiting','Waiting','Waiting'],
-      orange: ['✓ Done','✓ Done','In progress','In progress','In progress','In progress'],
-      green:  ['✓ Done','✓ Done','✓ Done','✓ Done','✓ Done','✓ Done'],
-    };
-    const done   = doneMap[status];
-    const active = activeMap[status];
-    ['ps1','ps2','ps3','ps4','ps5','ps6'].forEach((id, i) => {
-      const el = document.getElementById(id);
-      el.classList.remove('done','active','locked');
-      if (i < done)        el.classList.add('done');
-      else if (i === active) el.classList.add('active');
-      else                 el.classList.add('locked');
-      document.getElementById(id + 's').textContent = labels[status][i];
-    });
-    updateSubmitBtn();
-  }
-
-  // ── SUBMIT ──
-  // ── KEYWORD EDIT / SAVE ──
-  let _kwEditMode       = false;
-  let _currentKwsFromCB = '';  // secondary KWs (KW2–KW15) as comma-string
-  let _currentMainKw    = '';  // main keyword text
-  let _currentMainSv    = '';  // main keyword search volume
-
-  // Called on every keystroke in main KW fields
-  function onMainKwInput() {
-    _currentMainKw = (document.getElementById('mainKwInput').value || '').trim();
-    _currentMainSv = (document.getElementById('mainKwSv').value || '').trim();
-    updateSubmitBtn();
-  }
-
-  function enableKwEdit() {
-    if (_kwEditMode) return;
-    _kwEditMode = true;
-    const box  = document.getElementById('keywordsBox');
-    const edit = document.getElementById('keywordsEdit');
-    const save = document.getElementById('saveKwBtn');
-    const cancel = document.getElementById('cancelKwBtn');
-    edit.value = _currentKwsFromCB || '';
-    box.style.display  = 'none';
-    edit.style.display = 'block';
-    save.style.display = 'inline-block';
-    cancel.style.display = 'inline-block';
-    edit.focus();
-  }
-
-  function cancelKwEdit() {
-    _kwEditMode = false;
-    const box  = document.getElementById('keywordsBox');
-    const edit = document.getElementById('keywordsEdit');
-    const save = document.getElementById('saveKwBtn');
-    const cancel = document.getElementById('cancelKwBtn');
-    box.style.display  = 'flex';
-    edit.style.display = 'none';
-    save.style.display = 'none';
-    cancel.style.display = 'none';
-  }
-
-  async function saveKeywords() {
-    const cfg = getDevConfig();
-
-    // Main KW from field
-    const mainKw = (document.getElementById('mainKwInput').value || '').trim();
-    const mainSv = (document.getElementById('mainKwSv').value || '').trim();
-
-    // Secondary: merge CB existing + textarea input, max 14, deduplicate
-    const editVal  = (document.getElementById('keywordsEdit').value || '');
-    const cbSec    = _currentKwsFromCB.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
-    const newSec   = editVal.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
-    const merged   = [...new Set([...cbSec, ...newSec])].slice(0, 14);
-
-    const totalKws = (mainKw ? 1 : 0) + merged.length;
-    if (totalKws === 0) { logLine('No keywords to save', 'warn'); return; }
-    if (merged.length >= 14) logLine('⚠ Secondary keyword limit reached (14 max)', 'warn');
-
-    const saveBtn = document.getElementById('saveKwBtn');
-    saveBtn.textContent = '⏳ Saving…';
-    saveBtn.disabled = true;
-
-    logLine('Saving keywords → Main: "' + (mainKw||'—') + '" + ' + merged.length + ' secondary', 'step');
-
-    if (!cfg.kwSyncWebhook) {
-      await new Promise(r => setTimeout(r, 700));
-      logLine('Keywords saved (demo) · CB + Sheet updated', 'ok');
-      if (mainKw) { _currentMainKw = mainKw; _currentMainSv = mainSv; }
-      updateKwDisplay(merged);
-      cancelKwEdit();
-      saveBtn.textContent = '💾 Save to CB + Sheet';
-      saveBtn.disabled = false;
-      showToast('✅ Keywords saved');
-      if (currentStatus === 'blue') setStatus('orange');
-      return;
-    }
-
-    try {
-      // Build full keyword list: main first, then secondary
-      const allKws = mainKw ? [mainKw, ...merged] : merged;
-      const res = await fetch(cfg.kwSyncWebhook, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          docId:         selectedDocData ? selectedDocData.docId : '',
-          targetDocId:   selectedDocData ? selectedDocData.docId : '',
-          sourceDocId:   document.getElementById('statusUrl').value.trim().split('/').pop(),
-          language:      selectedLang,
-          mainKw,
-          mainSv,
-          keywords:      merged.join(', '),
-          cbKeywords:    _currentKwsFromCB,
-          sheetKeywords: ''
-        })
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const finalSec = (data.mergedKeywords || merged.join(', ')).split(',').map(k => k.trim()).filter(Boolean);
-      logLine('Saved to CB + Sheet · main: "' + mainKw + '" + ' + finalSec.length + ' secondary', 'ok');
-      _currentMainKw = mainKw;
-      _currentMainSv = mainSv;
-      updateKwDisplay(finalSec);
-      cancelKwEdit();
-      showToast('✅ Keywords synced to CB + Sheet');
-      if (currentStatus === 'blue') setStatus('orange');
-    } catch(err) {
-      logLine('Keyword save failed: ' + err.message, 'error');
-    } finally {
-      saveBtn.textContent = '💾 Save to CB + Sheet';
-      saveBtn.disabled = false;
-    }
-  }
-
-  function updateKwDisplay(kwArray) {
-    _currentKwsFromCB = kwArray.join(', ');
-    const box = document.getElementById('keywordsBox');
-    // Render as pills
-    box.innerHTML = '';
-    if (kwArray.length === 0) {
-      box.innerHTML = '<span style="font-size:12px;color:var(--gray500);font-style:italic;">No secondary keywords yet · click to add</span>';
-      box.style.borderColor = 'transparent';
-    } else {
-      kwArray.forEach(kw => {
-        const pill = document.createElement('span');
-        pill.style.cssText = 'background:var(--blue300);color:var(--blue600);padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;font-style:normal;white-space:nowrap;';
-        pill.textContent = kw;
-        box.appendChild(pill);
-      });
-      box.style.borderColor = 'var(--state-green)';
-    }
-    const badge = document.getElementById('kwCountBadge');
-    badge.style.display = kwArray.length > 0 ? 'inline' : 'none';
-    badge.textContent   = kwArray.length + ' / 14';
-    badge.style.background = kwArray.length >= 14 ? 'var(--orange)' : 'var(--state-green)';
-  }
-
-  // ── SKIP KEYWORDS ──
-  function skipKeywords() {
-    const kwBox = document.getElementById('keywordsBox');
-    kwBox.style.color = 'var(--gray500)';
-    kwBox.style.fontStyle = 'italic';
-    kwBox.style.borderColor = 'transparent';
-    kwBox.textContent = 'Skipped – enter keywords manually in Additional AI Instructions';
-    document.getElementById('skipKwBtn').style.display = 'none';
-    // Allow pipeline to proceed even without keywords
-    if (currentStatus === 'blue') setStatus('orange');
-    logLine('SEO Keywords step skipped – entering Blue → Orange manually', 'warn');
-    updateSubmitBtn();
-  }
-
-  // ── LANGUAGE CHANGE → load CB workflows ──
-  function onLanguageChange() {
-    const lang = document.getElementById('targetLanguage').value;
-    if (!lang) { updateSubmitBtn(); return; }
-
-    // Sync pill on the left
-    const dupDoc = duplicatesData.find(d => d.language.toLowerCase() === lang);
-    const pills  = document.querySelectorAll('.lang-pill');
-    let matchedPill = null;
-    pills.forEach(p => {
-      p.classList.remove('selected');
-      // find pill by its label text
-      const code = p.querySelector('.lang-pill-code')?.textContent?.toLowerCase();
-      if (code === lang) matchedPill = p;
-    });
-
-    if (matchedPill && duplicatesData.length > 0) {
-      // Only sync if a check has been run
-      matchedPill.classList.add('selected');
-      selectLanguage(lang, dupDoc || null, matchedPill, true); // true = skip dropdown re-sync
-    } else {
-      loadCbWorkflows(lang);
-    }
-    updateSubmitBtn();
-  }
-
-  async function loadCbWorkflows(lang) {
-    const sel     = document.getElementById('cbWorkflow');
-    const spinner = document.getElementById('cbWorkflowSpinner');
-    const help    = document.getElementById('cbWorkflowHelp');
-    if (!lang) {
-      sel.innerHTML = '<option value="">— Select language first —</option>';
-      sel.disabled = true;
-      return;
-    }
-    sel.disabled = true;
-    sel.innerHTML = '<option value="">⏳ Loading…</option>';
-    spinner.style.display = 'inline';
-
-    const cfg = getDevConfig();
     if (!cfg.cbApiToken) {
-      // Demo fallback
-      await new Promise(r => setTimeout(r, 400));
-      const demo = [
-        { id: 'wf-mp-' + lang,   name: 'MP Translation · ' + lang.toUpperCase() },
-        { id: 'wf-cp-' + lang,   name: 'CP Translation · ' + lang.toUpperCase() },
-        { id: 'wf-seo-' + lang,  name: 'SEO Optimisation · ' + lang.toUpperCase() },
-      ];
-      populateWorkflows(sel, demo, lang);
-      spinner.style.display = 'none';
-      help.textContent = demo.length + ' workflow(s) found in ContentBird for ' + lang.toUpperCase() + ' (demo)';
+      logLine('No CB API token configured – cannot fetch from CB', 'warn');
+      btn.disabled = false; btn.textContent = '▼ FROM CB';
       return;
     }
 
     try {
-      const res = await fetch('https://api.live.mycontentbird.io/api/cms/get-ids', {
-        method: 'GET',
+      const res = await fetch('https://api.live.mycontentbird.io/api/cms/get-content/' + selectedLang.docId, {
         headers: {
           'X-ContentbirdApiToken': cfg.cbApiToken,
           'Content-Type': 'application/json',
@@ -1241,170 +1181,358 @@
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      // get-ids returns workflows/templates – filter by language project
-      const langProjectMap = { en:2,es:3,fr:4,it:5,nl:6,pl:7,fi:8,dk:9,si:10 };
-      const projectId = langProjectMap[lang];
-      const workflows = (data.data?.workflows || data.workflows || [])
-        .filter(w => !projectId || !w.project_id || w.project_id === projectId);
-      if (workflows.length === 0) throw new Error('No workflows found');
-      populateWorkflows(sel, workflows.map(w => ({ id: w.id, name: w.name || w.title })), lang);
-      help.textContent = workflows.length + ' workflow(s) found for ' + lang.toUpperCase();
-    } catch(err) {
-      logLine('CB workflow load failed: ' + err.message + ' – using demo data', 'warn');
-      const demo = [
-        { id: 'wf-mp-' + lang, name: 'MP Translation · ' + lang.toUpperCase() },
-        { id: 'wf-cp-' + lang, name: 'CP Translation · ' + lang.toUpperCase() },
-      ];
-      populateWorkflows(sel, demo, lang);
-      help.textContent = 'Could not load from API – showing placeholders';
+      const kws = data.data?.keywords || data.data?.seo_keywords || [];
+      logLine('FROM CB · ' + kws.length + ' keyword(s) received', 'ok');
+      // TODO: write to sheet via keyword-sync webhook, then reload
+      // For now show in UI
+      logLine('Keyword sync to Sheet not yet wired – showing preview only', 'warn');
+    } catch(e) {
+      logLine('FROM CB failed: ' + e.message, 'error');
     } finally {
-      spinner.style.display = 'none';
+      btn.disabled = false; btn.textContent = '▼ FROM CB';
     }
   }
 
-  function populateWorkflows(sel, workflows, lang) {
-    sel.innerHTML = '<option value="">— Select workflow —</option>';
-    workflows.forEach(w => {
-      const opt = document.createElement('option');
-      opt.value = w.id;
-      opt.textContent = w.name;
-      sel.appendChild(opt);
+  // ── SEND TO CB – confirm ──
+  function confirmSendToCB() {
+    if (!selectedLang) return;
+    document.getElementById('confirmOverlay').classList.add('visible');
+  }
+  function closeConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('visible');
+  }
+  async function doSendToCB() {
+    closeConfirm();
+    if (!selectedLang) return;
+    const cfg = getDevConfig();
+    logLine('SEND TO CB · Pushing keywords for doc ' + selectedLang.docId, 'step');
+
+    if (!cfg.cbApiToken) {
+      logLine('No CB API token configured – cannot send to CB', 'warn');
+      return;
+    }
+
+    // Collect keywords from current sheet row
+    const normalId = String(parseInt(parseFloat(String(selectedLang.docId))));
+    const row = sheetRows.find(r => String(parseInt(parseFloat(String(r['Target Doc ID']||'').trim()))) === normalId);
+    if (!row) { logLine('No sheet row found for this document', 'error'); return; }
+
+    // TODO: wire to keyword-sync webhook for actual CB write
+    logLine('SEND TO CB · Keyword sync webhook not yet wired – pending Bastian endpoint', 'warn');
+  }
+
+  // ── DEV CONFIG ─────────────────────────────────────────────
+  function toggleDev() {
+    const panel   = document.getElementById('devPanel');
+    const chevron = document.getElementById('devChevron');
+    const open    = panel.style.display === 'none';
+    panel.style.display  = open ? 'block' : 'none';
+    chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+  }
+
+  function toggleVis(id, btn) {
+    const input = document.getElementById(id);
+    const show  = input.type === 'password';
+    input.type  = show ? 'text' : 'password';
+    btn.textContent = show ? '🙈' : '👁';
+  }
+
+  function saveDevConfig() {
+    const cfg = {
+      cbApiToken:   document.getElementById('cbApiToken').value.trim(),
+      refWebhook:   document.getElementById('refWebhook').value.trim(),
+      step1Webhook: document.getElementById('step1Webhook').value.trim(),
+    };
+    sessionStorage.setItem('bike24_cfg', JSON.stringify(cfg));
+    const msg = document.getElementById('devSaveMsg');
+    msg.style.display = 'inline';
+    setTimeout(() => { msg.style.display = 'none'; }, 2500);
+    logLine('Developer config saved to session · ready to connect', 'ok');
+  }
+
+  function getDevConfig() {
+    try { return JSON.parse(sessionStorage.getItem('bike24_cfg') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  // ── LOG HELPERS ─────────────────────────────────────────────
+  const icons = { info: '·', ok: '✓', warn: '⚠', error: '✕', step: '▶' };
+
+  function logLine(msg, type = 'info') {
+    const body = document.getElementById('logBody');
+    // Remove placeholder on first entry
+    const ph = body.querySelector('.log-placeholder');
+    if (ph) ph.remove();
+
+    const now = new Date();
+    const ts  = now.toTimeString().slice(0,8);
+
+    const line = document.createElement('div');
+    line.className = 'log-line ' + type;
+    line.innerHTML =
+      `<span class="log-time">${ts}</span>` +
+      `<span class="log-icon">${icons[type]}</span>` +
+      `<span class="log-msg">${msg}</span>`;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function setLogState(state) {
+    const dot    = document.getElementById('logDot');
+    const status = document.getElementById('logStatus');
+    dot.className    = 'log-dot ' + state;
+    status.className = 'log-status ' + state;
+    const labels = { idle: 'Idle', running: 'Running…', done: 'Completed', error: 'Error' };
+    status.textContent = labels[state] || state;
+  }
+
+  // ── FILE DISPLAY ────────────────────────────────────────────
+  document.getElementById('wordFiles').addEventListener('change', function() {
+    const info = document.getElementById('fileInfo');
+    if (this.files.length > 0) {
+      info.innerHTML = `<strong>${this.files.length} file(s):</strong> ` +
+        Array.from(this.files).map(f => f.name).join(' · ');
+      info.style.display = 'block';
+    } else { info.style.display = 'none'; }
+  });
+
+  // ── CB RADIO ────────────────────────────────────────────────
+  function selectCB(val, el) {
+    document.querySelectorAll('.radio-option').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input[type="radio"]').checked = true;
+    document.getElementById('cbLinkBox').classList.remove('active');
+    document.getElementById('cbDupBox').classList.remove('active');
+    if (val === 'link')      document.getElementById('cbLinkBox').classList.add('active');
+    if (val === 'duplicate') document.getElementById('cbDupBox').classList.add('active');
+    updateSubmitBtn();
+  }
+
+  // ── STATUS CHECK ────────────────────────────────────────────
+  async function checkStatus() {
+    const url   = document.getElementById('statusUrl').value.trim();
+    const match = url.match(/\/content\/(\d+)/);
+    if (!match) return;
+    const contentId = match[1];
+
+    const btn = document.getElementById('checkBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Checking…';
+    setLogState('running');
+
+    logLine('▶ Status Check · ContentBird Reference Lookup', 'step');
+    logLine('CB URL: ' + url, 'info');
+    logLine('Content ID: ' + contentId, 'info');
+
+    const cfg = getDevConfig();
+
+    if (!cfg.refWebhook) {
+      // ── DEMO MODE ──
+      logLine('No Reference Check webhook configured → demo mode', 'warn');
+      await new Promise(r => setTimeout(r, 500));
+      const demo = [
+        { language: 'it', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20309', title: 'Leadgen | Cannondale SuperSix EVO | IT' },
+        { language: 'es', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20310', title: 'Leadgen | Cannondale SuperSix EVO | ES' },
+        { language: 'pl', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20311', title: 'Leadgen | Cannondale SuperSix EVO | PL' },
+        { language: 'us', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20312', title: 'Leadgen | Cannondale SuperSix EVO | US' },
+        { language: 'nl', docUrl: 'https://bike24net.mycontentbird.io/creation/content/20313', title: 'Leadgen | Cannondale SuperSix EVO | NL' },
+      ];
+      logLine('5 duplicates found (demo data)', 'ok');
+      sheetRows = [
+        { 'Target Doc ID': '20309', 'Main KW': 'vélo route carbone', 'SV': '2400', 'KW2': 'vélo de course léger', 'SV2': '880', 'KW3': 'SuperSix EVO prix', 'SV3': '320' },
+        { 'Target Doc ID': '20310', 'Main KW': 'bicicleta carretera carbono', 'SV': '1900', 'KW2': 'bici ligera competicion', 'SV2': '540' },
+        { 'Target Doc ID': '20313', 'Main KW': 'racefiets carbon', 'SV': '1100', 'KW2': 'lichtgewicht racefiets', 'SV2': '420' },
+      ];
+      renderFlags(demo);
+      setStatus('orange');
+      btn.disabled = false; btn.textContent = '▶ Check Status';
+      setLogState('done');
+      return;
+    }
+
+    // ── REAL n8n CALL ──
+    try {
+      logLine('Calling n8n → reference_check…', 'info');
+      const res = await fetch(cfg.refWebhook, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentId, cbUrl: url, cbApiToken: cfg.cbApiToken })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const raw = await res.json();
+      // n8n allIncomingItems returns an array → unwrap first item
+      const data = Array.isArray(raw) ? raw[0] : raw;
+      const langs = data.languages || data[0]?.languages || [];
+      const count = data.count ?? langs.length;
+      // Store sheet rows for keyword lookup
+      sheetRows = data.sheetRows || [];
+      logLine('Reference check complete · ' + count + ' duplicate(s) found', 'ok');
+      renderFlags(langs);
+      setStatus(count === 0 ? 'red' : 'orange');
+    } catch(err) {
+      logLine('Reference check failed: ' + err.message, 'error');
+      setLogState('error');
+    } finally {
+      btn.disabled = false; btn.textContent = '▶ Check Status';
+      if (!document.getElementById('logDot').className.includes('error')) setLogState('done');
+    }
+  }
+
+  function setStatus(status) {
+    currentStatus = status;
+    ['red','orange','green','blue'].forEach(s => {
+      const el = document.getElementById('lane-' + s);
+      if (el) el.classList.remove('active-red','active-orange','active-green','active-blue');
     });
-    sel.disabled = false;
+    const el = document.getElementById('lane-' + status);
+    if (el) el.classList.add('active-' + status);
+
+    const steps = ['ps1','ps2','ps3','ps4','ps5','ps6'];
+    const doneCount = { red: 0, orange: 1, blue: 1, green: 2 };
+    const done = doneCount[status] ?? 0;
+    const statusLabels = {
+      red:    ['In progress','Pending','Waiting','Waiting','Waiting','Waiting'],
+      orange: ['✓ Done','In progress','Waiting','Waiting','Waiting','Waiting'],
+      blue:   ['✓ Done','In Translation','Waiting','Waiting','Waiting','Waiting'],
+      green:  ['✓ Done','✓ Done','Ready','Waiting','Waiting','Waiting'],
+    };
+    steps.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('done','active','locked');
+      if      (i < done)   el.classList.add('done');
+      else if (i === done) el.classList.add('active');
+      else                 el.classList.add('locked');
+      document.getElementById(id + 's').textContent = (statusLabels[status] || statusLabels.orange)[i];
+    });
     updateSubmitBtn();
   }
 
   function updateSubmitBtn() {
-    const textType  = document.getElementById('textType').value;
-    const lang      = document.getElementById('targetLanguage').value;
-    const persona   = document.getElementById('targetPersona').value;
-    const style     = document.getElementById('writingStyle').value;
-    const cbWf      = document.getElementById('cbWorkflow').value;
-    const hasDoc    = selectedLang !== null && selectedDocData !== null;
-    const canStart  = currentStatus === 'blue' || currentStatus === 'orange';
-    const ready     = canStart && hasDoc && textType && lang && persona && style && cbWf;
-    document.getElementById('submitBtn').disabled = !ready;
-    const hint = document.getElementById('submitHint');
-    if (!selectedLang) {
-      hint.textContent = 'Select a language in Stage 1 to continue';
-    } else if (!hasDoc) {
-      hint.textContent = 'Create a duplicate first using the button in Stage 2';
-    } else if (!canStart) {
-      hint.textContent = currentStatus === 'green'
-        ? 'Text already finished – use Re-translate or Optimise to restart'
-        : 'Reach Blue or Orange status to enable the pipeline';
-    } else if (!textType || !lang || !persona || !style || !cbWf) {
-      hint.textContent = 'Complete all fields on the right to start';
-    } else {
-      hint.classList.add('hidden');
-      return;
-    }
-    hint.classList.remove('hidden');
-  }
-
-  function handleSubmit() {
-    const cfg      = getDevConfig();
+    const mode     = document.getElementById('workflowMode').value;
+    const textType = document.getElementById('textType').value;
     const lang     = document.getElementById('targetLanguage').value;
     const persona  = document.getElementById('targetPersona').value;
+    const cbOption = document.querySelector('input[name="cbOption"]:checked');
+    const isGreen  = currentStatus === 'green';
+    const ready    = isGreen && mode && textType && lang && persona && cbOption;
+    document.getElementById('submitBtn').disabled = !ready;
+    const hint = document.getElementById('submitHint');
+    if (!isGreen) {
+      hint.textContent = 'Complete Status Check and reach GREEN status to enable';
+      hint.classList.remove('hidden');
+    } else if (!mode || !textType || !lang || !persona || !cbOption) {
+      hint.textContent = 'Complete all fields on the right to start';
+      hint.classList.remove('hidden');
+    } else {
+      hint.classList.add('hidden');
+    }
+  }
+
+  // ── SUBMIT / PIPELINE ───────────────────────────────────────
+  function handleSubmit() {
+    const cfg3 = getDevConfig();
+    if (!cfg3.step1Webhook) {
+      logLine('No Step 1 webhook configured – running demo mode', 'warn');
+    }
+    const lang     = document.getElementById('targetLanguage').value;
+    const mode     = document.getElementById('workflowMode').value;
+    const persona  = document.getElementById('targetPersona').value;
     const textType = document.getElementById('textType').value;
-    const style    = document.getElementById('writingStyle').value;
-    const cbWf     = document.getElementById('cbWorkflow').value;
-    const aiInstr  = document.getElementById('aiInstructions').value.trim();
+
+    const payload = {
+      workflowMode: mode, textType, targetLanguage: lang, targetPersona: persona,
+      cbUrl: document.getElementById('cbDuplicate').value ||
+             document.getElementById('cbLink').value || '',
+      cbOption: document.querySelector('input[name="cbOption"]:checked')?.value || '',
+    };
+
+    // Start log
     setLogState('running');
     logLine('━━━ Pipeline started ━━━', 'step');
-    logLine('Language: ' + lang.toUpperCase() + ' · Persona: ' + persona + ' · Style: ' + style, 'info');
-    if (cbWf) logLine('CB Workflow: ' + cbWf, 'info');
-    if (aiInstr) logLine('Extra instructions: ' + aiInstr.slice(0,80) + (aiInstr.length > 80 ? '…' : ''), 'info');
-    if (!cfg.step1Webhook) { simulatePipelineLog(lang, mode); return; }
-    fetch(cfg.step1Webhook, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ workflowMode: mode, textType, targetLanguage: lang, targetPersona: persona, cbUrl: sourceDocUrl, action: 'translate' })
-    }).then(r => r.json()).then(() => simulatePipelineLog(lang, mode))
-      .catch(e => { logLine('Webhook error: ' + e.message, 'error'); setLogState('error'); });
+    logLine(`Mode: ${mode.toUpperCase()} · Language: ${lang.toUpperCase()} · Persona: ${persona}`, 'info');
+    logLine('Sending payload to n8n webhook…', 'info');
+
+    const cfg2 = getDevConfig();
+    if (cfg2.step1Webhook) {
+      fetch(cfg2.step1Webhook, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({...payload, action: 'translate'})
+      }).then(r => r.json()).then(() => {
+        simulatePipelineLog(lang, mode);
+      }).catch(e => {
+        logLine('Webhook error: ' + e.message, 'error');
+        setLogState('error');
+      });
+      return;
+    }
+    // Demo pipeline simulation (no webhook configured)
+    simulatePipelineLog(lang, mode);
   }
 
   function simulatePipelineLog(lang, mode) {
     const steps = [
-      [300,  'step', '▶ Fetching source document from ContentBird'],
-      [800,  'ok',   'Source document retrieved'],
-      [1100, 'step', '▶ Creating duplicate in ContentBird (' + lang.toUpperCase() + ')'],
-      [1800, 'ok',   'Duplicate created · docId written to Google Sheet'],
-      [2100, 'step', '▶ Claude API · Literal Translation (DE → ' + lang.toUpperCase() + ')'],
-      [3100, 'ok',   'Literal translation complete · 847 tokens'],
-      [3300, 'step', '▶ Claude API · Free Adaptation · Persona applied'],
-      [4300, 'ok',   'Adaptation complete'],
-      [4500, 'step', '▶ Terminology & Typography Check'],
-      [5200, 'ok',   '3 corrections applied'],
-      [5400, 'step', '▶ Proofread & Final Check'],
-      [6100, 'ok',   'Proofread complete · confidence: HIGH'],
-      [6300, 'ok',   '━━━ Pipeline complete ✓ ━━━'],
+      [300,  'step', `▶ Step 1 · Fetching source document from ContentBird`],
+      [800,  'ok',   'Source document retrieved (docId extracted from URL)'],
+      [1100, 'step', `▶ Step 1 · Loading project knowledge from GitHub`],
+      [1600, 'ok',   'Instructions_DEFR.md loaded (v2.0)'],
+      [1900, 'ok',   'Terminology_DEFR.md loaded (v2.0)'],
+      [2100, 'ok',   'Glossary_DEFR.csv loaded (1,712 entries)'],
+      [2400, 'step', `▶ Step 2 · Creating duplicate in ContentBird (${lang.toUpperCase()})`],
+      [3000, 'ok',   'Duplicate created · new docId written to Google Sheet'],
+      [3200, 'step', `▶ Step 3 · Claude API · Literal Translation (DE → ${lang.toUpperCase()})`],
+      [4200, 'ok',   'Literal translation complete · 847 tokens used'],
+      [4400, 'step', `▶ Step 4 · Claude API · Free Adaptation · Persona applied`],
+      [5400, 'ok',   'Free adaptation complete · tone and SEO rules applied'],
+      [5600, 'step', '▶ Step 5 · Claude API · Terminology & Typography Check'],
+      [6300, 'ok',   '3 corrections applied (e-bike→VAE, setup→montage, &→et)'],
+      [6500, 'step', '▶ Step 6 · Claude API · Proofread & Final Check'],
+      [7200, 'ok',   'Proofread complete · confidence: HIGH · no issues flagged'],
+      [7400, 'info', 'Writing translation to ContentBird via create-content-version…'],
+      [8000, 'ok',   'Content version created successfully'],
+      [8200, 'info', 'Updating document status → "Übersetzung fertig" (ID 15)'],
+      [8600, 'ok',   '━━━ Pipeline complete ✓ ━━━'],
     ];
+
     steps.forEach(([delay, type, msg]) => {
       setTimeout(() => {
         logLine(msg, type);
         if (msg.includes('Pipeline complete')) {
           setLogState('done');
-          setStatus('green');
-          showToast('✅ Pipeline completed successfully!');
+          showToast();
+          // Update pipeline steps to all done
+          ['ps1','ps2','ps3','ps4','ps5','ps6'].forEach((id, i) => {
+            document.getElementById(id).classList.remove('done','active','locked');
+            document.getElementById(id).classList.add('done');
+            document.getElementById(id + 's').textContent = '✓ Done';
+          });
         }
       }, delay);
     });
   }
 
-  // ── DEV / HELPERS ──
-  function toggleDev() {
-    const p = document.getElementById('devPanel');
-    const c = document.getElementById('devChevron');
-    const open = p.style.display === 'none';
-    p.style.display = open ? 'block' : 'none';
-    c.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
-  }
-  function toggleVis(id, btn) {
-    const input = document.getElementById(id);
-    const show = input.type === 'password';
-    input.type = show ? 'text' : 'password';
-    btn.textContent = show ? '🙈' : '👁';
-  }
-  function saveDevConfig() {
-    sessionStorage.setItem('bike24_cfg', JSON.stringify({
-      cbApiToken:    document.getElementById('cbApiToken').value.trim(),
-      refWebhook:    document.getElementById('refWebhook').value.trim(),
-      step1Webhook:  document.getElementById('step1Webhook').value.trim(),
-      kwSyncWebhook: document.getElementById('kwSyncWebhook').value.trim(),
-    }));
-    const msg = document.getElementById('devSaveMsg');
-    msg.style.display = 'inline';
-    setTimeout(() => { msg.style.display = 'none'; }, 2500);
-    logLine('Developer config saved', 'ok');
-  }
-  function getDevConfig() {
-    try { return JSON.parse(sessionStorage.getItem('bike24_cfg') || '{}'); } catch(e) { return {}; }
-  }
-  // Source Document removed – handled automatically via Stage 1/2
-  const icons = { info:'·', ok:'✓', warn:'⚠', error:'✕', step:'▶' };
-  function logLine(msg, type = 'info') {
-    const body = document.getElementById('logBody');
-    const ph = body.querySelector('.log-placeholder');
-    if (ph) ph.remove();
-    const ts = new Date().toTimeString().slice(0,8);
-    const line = document.createElement('div');
-    line.className = 'log-line ' + type;
-    line.innerHTML = '<span class="log-time">' + ts + '</span><span class="log-icon">' + (icons[type]||'·') + '</span><span class="log-msg">' + msg + '</span>';
-    body.appendChild(line);
-    body.scrollTop = body.scrollHeight;
-  }
-  function setLogState(state) {
-    document.getElementById('logDot').className = 'log-dot ' + state;
-    const s = document.getElementById('logStatus');
-    s.className = 'log-status ' + state;
-    s.textContent = { idle:'Idle', running:'Running…', done:'Completed', error:'Error' }[state] || state;
-  }
-  function showToast(msg) {
+  function showToast() {
     const t = document.getElementById('toast');
-    t.textContent = msg;
     t.style.display = 'block';
     setTimeout(() => { t.style.display = 'none'; }, 4000);
   }
+
+  ['workflowMode','textType','targetLanguage','targetPersona'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', updateSubmitBtn);
+  });
 </script>
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title">⚠ Overwrite Keywords?</div>
+    <div class="confirm-msg">
+      This will <strong>overwrite the existing keywords</strong> in ContentBird for this language document.<br><br>
+      This cannot be undone. Continue?
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-confirm-no" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-confirm-yes" onclick="doSendToCB()">Yes, overwrite</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
