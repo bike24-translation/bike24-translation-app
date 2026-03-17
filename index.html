@@ -879,24 +879,28 @@
     if (hasId) fetchDocTitle(url);
   }
 
+  let _fetchTitleTimer = null;
   async function fetchDocTitle(url) {
-    const match = url.match(/\/content\/(\d+)/);
-    if (!match) return;
-    const contentId = match[1];
-    const cfg = getDevConfig();
-    if (!cfg.cbApiToken) return;
-    try {
-      const res = await fetch('https://api.live.mycontentbird.io/api/cms/get-content/' + contentId, {
-        headers: { 'X-ContentbirdApiToken': cfg.cbApiToken, 'Content-Type': 'application/json', 'Contentbird-Locale': 'de' }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      const title = data.data?.title || '';
-      const langRaw = typeof data.data?.language === 'object'
-        ? Object.keys(data.data.language)[0]
-        : (data.data?.language || '');
-      if (title) showDetectedLang(langRaw, title);
-    } catch(e) {}
+    if (_fetchTitleTimer) clearTimeout(_fetchTitleTimer);
+    _fetchTitleTimer = setTimeout(async () => {
+      const match = url.match(/\/content\/(\d+)/);
+      if (!match) return;
+      const contentId = match[1];
+      const cfg = getDevConfig();
+      if (!cfg.cbApiToken) return;
+      try {
+        const res = await fetch('https://api.live.mycontentbird.io/api/cms/get-content/' + contentId, {
+          headers: { 'X-ContentbirdApiToken': cfg.cbApiToken, 'Content-Type': 'application/json', 'Contentbird-Locale': 'de' }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const title = data.data?.title || '';
+        const langRaw = typeof data.data?.language === 'object'
+          ? Object.keys(data.data.language)[0]
+          : (data.data?.language || '');
+        if (title) showDetectedLang(langRaw, title);
+      } catch(e) {}
+    }, 600);
   }
 
   function resetStage2() {
@@ -959,6 +963,19 @@
       const payload = Array.isArray(raw) ? (raw[0]?.json ?? raw[0]) : (raw?.json ?? raw);
       duplicatesData = payload.languages || [];
       const count = payload.count ?? duplicatesData.length;
+
+      // If no other versions found, show the source doc itself as its own version
+      if (duplicatesData.length === 0 && payload.sourceLanguage && payload.contentId) {
+        const cbLangMap = { 'us': 'en' };
+        const lang = cbLangMap[(payload.sourceLanguage||'').toLowerCase()] || (payload.sourceLanguage||'').toLowerCase();
+        duplicatesData = [{
+          language: lang,
+          docId: String(payload.contentId),
+          docUrl: url,
+          title: payload.sourceTitle || '',
+          isSelf: true
+        }];
+      }
       logLine('Check complete · ' + count + ' version(s) found', 'ok');
       if (payload.sourceTitle) logLine('Source: ' + payload.sourceTitle, 'info');
       // Show detected language
