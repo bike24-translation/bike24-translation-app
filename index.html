@@ -739,7 +739,11 @@
     const box = document.getElementById('langPills');
     box.innerHTML = '';
     ALL_LANGS.forEach(lang => {
-      const found = duplicatesData.find(d => d.language.toLowerCase() === lang.code);
+      const _cbLangMap = { 'us': 'en' };
+      const found = duplicatesData.find(d => {
+        const normalized = _cbLangMap[(d.language||'').toLowerCase()] || (d.language||'').toLowerCase();
+        return normalized === lang.code;
+      });
       const pill  = document.createElement('div');
       pill.className = 'lang-pill';
 
