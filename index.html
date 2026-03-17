@@ -864,8 +864,9 @@
   // ── URL INPUT ──
   function onUrlInput() {
     const url = document.getElementById('statusUrl').value.trim();
-    document.getElementById('checkBtn').disabled = !/\/content\/\d+/.test(url);
-    document.getElementById('copyToListBtn').disabled = true;
+    const hasId = /\/content\/\d+/.test(url);
+    document.getElementById('checkBtn').disabled = !hasId;
+    document.getElementById('copyToListBtn').disabled = !hasId;
     document.getElementById('detectedLangBox').style.display = 'none';
     duplicatesData  = [];
     selectedLang    = null;
