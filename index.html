@@ -876,6 +876,27 @@
     selectedDocData = null;
     renderAllPills('dimmed');
     resetStage2();
+    if (hasId) fetchDocTitle(url);
+  }
+
+  async function fetchDocTitle(url) {
+    const match = url.match(/\/content\/(\d+)/);
+    if (!match) return;
+    const contentId = match[1];
+    const cfg = getDevConfig();
+    if (!cfg.cbApiToken) return;
+    try {
+      const res = await fetch('https://api.live.mycontentbird.io/api/cms/get-content/' + contentId, {
+        headers: { 'X-ContentbirdApiToken': cfg.cbApiToken, 'Content-Type': 'application/json', 'Contentbird-Locale': 'de' }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const title = data.data?.title || '';
+      const langRaw = typeof data.data?.language === 'object'
+        ? Object.keys(data.data.language)[0]
+        : (data.data?.language || '');
+      if (title) showDetectedLang(langRaw, title);
+    } catch(e) {}
   }
 
   function resetStage2() {
