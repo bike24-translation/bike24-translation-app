@@ -321,8 +321,13 @@
       </div>
       <div id="devPanel" style="display:none;">
         <div class="card-body" style="background:#0d1117;gap:12px;">
-          <!-- cbApiToken stored in session only – used for direct CB calls (fetchDocTitle, keyword sync) -->
-          <input type="hidden" id="cbApiToken">
+          <div class="field">
+            <label style="color:#506688;">ContentBird API Token</label>
+            <div style="position:relative;">
+              <input type="password" id="cbApiToken" placeholder="Bearer xxxxxxxxxxxxxxxx" autocomplete="off" style="background:#161b22;border:2px solid #30363d;color:#c9d1d9;font-size:12px;padding-right:40px;">
+              <button onclick="toggleVis('cbApiToken',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:#506688;padding:0;">👁</button>
+            </div>
+          </div>
           <div class="field">
             <label style="color:#506688;">n8n Reference Check Webhook</label>
             <div style="position:relative;">
@@ -951,7 +956,7 @@
     try {
       const res = await fetch(cfg.refWebhook, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentId, cbUrl: url })
+        body: JSON.stringify({ contentId, cbUrl: url, cbApiToken: cfg.cbApiToken })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const raw = await res.json();
@@ -1018,7 +1023,8 @@
         body: JSON.stringify({
           action: 'version',
           cbUrl: sourceDocUrl,
-          targetLanguage: selectedLang
+          targetLanguage: selectedLang,
+          cbApiToken: cfg.cbApiToken
         })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1060,7 +1066,8 @@
           action: mode === 'update' ? 'retranslate' : 'optimise',
           targetDocId: selectedDocData.docId,
           targetDocUrl: selectedDocData.docUrl,
-          targetLanguage: selectedLang
+          targetLanguage: selectedLang,
+          cbApiToken: cfg.cbApiToken
         })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1531,7 +1538,7 @@
     try {
       const res = await fetch(cfg.refWebhook, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentId, cbUrl: url, action: 'copy_to_list' })
+        body: JSON.stringify({ contentId, cbUrl: url, cbApiToken: cfg.cbApiToken, action: 'copy_to_list' })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       logLine('Added to Sheet · ' + (_sourceDocData.title || url), 'ok');
