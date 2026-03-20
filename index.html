@@ -960,7 +960,8 @@
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const raw = await res.json();
-      const payload = Array.isArray(raw) ? (raw[0]?.json ?? raw[0]) : (raw?.json ?? raw);
+      const first = Array.isArray(raw) ? raw[0] : raw;
+      const payload = first?.json ?? first;
       duplicatesData = payload.languages || [];
       const count = payload.count ?? duplicatesData.length;
 
