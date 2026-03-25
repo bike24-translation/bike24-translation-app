@@ -370,16 +370,16 @@
           <span class="help">Enter the source document URL</span>
           <!-- Detected language display -->
           <div id="detectedLangBox" style="display:none;margin-top:6px;padding:6px 10px;background:var(--blue100);border:1px solid var(--blue300);border-radius:7px;font-size:11px;color:var(--blue600);align-items:center;gap:6px;">
-            <span id="detectedLangFlag" style="font-size:16px;"></span>
+            
             <span id="detectedLangText"></span>
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn-check" id="checkBtn" onclick="checkDuplicates()" disabled>🔍 Check for Versions</button>
-          <button class="btn-check" id="copyToListBtn" onclick="copyToList()"
+          <button class="btn-check" id="copyToListBtn" onclick="openSourceInCB()"
             disabled
             style="background:var(--dark);color:var(--yellow);">
-            📋 Copy to list
+            ↗ Create Duplicate in CB
           </button>
         </div>
         <div class="lang-grid">
@@ -417,8 +417,8 @@
               <div class="a-title">Not found</div>
               <div class="a-desc">No target document found in ContentBird</div>
               <div class="a-actions a-actions-red">
-                <button class="btn-action btn-create-dup" id="btnCreateDup" onclick="openSourceInCB()">
-                  ↗ Duplicate in ContentBird
+                <button class="btn-action btn-create-dup" id="btnCreateDup" onclick="createVersion()">
+                  ➕ Create Version
                 </button>
               </div>
             </div>
@@ -809,7 +809,7 @@
       empty.style.display = 'block';
       empty.innerHTML = '⚠️ No version found for <strong>' + code.toUpperCase() + '</strong>';
       setStatus('red');
-      logLine('No version found for ' + code.toUpperCase() + ' – click "Duplicate in ContentBird" to create it natively', 'warn');
+      logLine('No version found for ' + code.toUpperCase() + ' – use "Create Version" to proceed', 'warn');
     }
 
     // Auto-set target language in Step 1 + load CB workflows
@@ -986,6 +986,7 @@
       // Update button text
       btn.disabled = false;
       btn.textContent = count === 0 ? '✓ No versions found' : '✓ ' + count + ' version(s) found';
+      if (count === 0) logLine('No duplicates found in CB – click "↗ Create Duplicate in CB" to create one', 'warn');
       btn.style.background = count === 0 ? 'var(--gray500)' : 'var(--state-green)';
       btn.style.color = 'white';
     } catch(err) {
@@ -1505,12 +1506,9 @@
     const cbLangMap = { 'us': 'en' };
     const code = cbLangMap[(langCode||'').toLowerCase()] || (langCode||'').toLowerCase();
     const info = ALL_LANGS.find(l => l.code === code) || { code, label: code.toUpperCase(), cc: code };
-    const flag = FLAG_EMOJI[info.cc] || FLAG_EMOJI[code] || '🌐';
-    _sourceDocData = { langCode: code, langLabel: info.label, flag, title };
+    _sourceDocData = { langCode: code, langLabel: info.label, title };
     const box    = document.getElementById('detectedLangBox');
-    const flagEl = document.getElementById('detectedLangFlag');
     const textEl = document.getElementById('detectedLangText');
-    flagEl.textContent = flag;
     textEl.textContent = (info.label || code.toUpperCase()) + ' · ' + (title || '');
     box.style.display = 'flex';
     document.getElementById('copyToListBtn').disabled = false;
@@ -1533,7 +1531,7 @@
       logLine('Added to list (demo) · ' + (_sourceDocData.title || url), 'ok');
       btn.textContent = '✓ Added!'; btn.style.background = 'var(--state-green)'; btn.style.color = 'white';
       setLogState('done');
-      setTimeout(() => { btn.textContent = '📋 Copy to list'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
+      setTimeout(() => { btn.textContent = '↗ Create Duplicate in CB'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
       return;
     }
     try {
@@ -1545,11 +1543,11 @@
       logLine('Added to Sheet · ' + (_sourceDocData.title || url), 'ok');
       btn.textContent = '✓ Added!'; btn.style.background = 'var(--state-green)'; btn.style.color = 'white';
       setLogState('done');
-      setTimeout(() => { btn.textContent = '📋 Copy to list'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
+      setTimeout(() => { btn.textContent = '↗ Create Duplicate in CB'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
     } catch(e) {
       logLine('Copy to list failed: ' + e.message, 'error');
       setLogState('error');
-      btn.disabled = false; btn.textContent = '📋 Copy to list';
+      btn.disabled = false; btn.textContent = '↗ Create Duplicate in CB';
     }
   }
 
@@ -1590,16 +1588,6 @@
     }
     window.open(selectedDocData.docUrl, '_blank');
     logLine('Opening CB document: ' + selectedDocData.docUrl, 'info');
-  }
-
-  function openSourceInCB() {
-    if (!sourceDocUrl) {
-      logLine('No source document URL – please run a check first', 'warn');
-      return;
-    }
-    window.open(sourceDocUrl, '_blank');
-    logLine('Opening DE source in ContentBird – use the "Duplicate" button there to create a ' + (selectedLang || '').toUpperCase() + ' version, then come back and run the check again', 'info');
-    showToast('↗ Opened in ContentBird – duplicate there, then re-check here');
   }
 
   // Patch selectLanguage to show action bar when doc exists
