@@ -379,7 +379,7 @@
           <button class="btn-check" id="copyToListBtn" onclick="openSourceInCB()"
             disabled
             style="background:var(--dark);color:var(--yellow);">
-            ↗ Create Duplicate in CB
+            🐦 Create Duplicate in CB
           </button>
         </div>
         <div class="lang-grid">
@@ -986,9 +986,17 @@
       // Update button text
       btn.disabled = false;
       btn.textContent = count === 0 ? '✓ No versions found' : '✓ ' + count + ' version(s) found';
-      if (count === 0) logLine('No duplicates found in CB – click "↗ Create Duplicate in CB" to create one', 'warn');
       btn.style.background = count === 0 ? 'var(--gray500)' : 'var(--state-green)';
       btn.style.color = 'white';
+      const dupBtn = document.getElementById('copyToListBtn');
+      if (count === 0) {
+        logLine('No duplicates found – click "🐦 Create Duplicate in CB" to create one', 'warn');
+        dupBtn.style.border = '2px dashed var(--yellow)';
+        dupBtn.style.boxShadow = '0 0 0 3px rgba(255,209,5,0.2)';
+      } else {
+        dupBtn.style.border = '';
+        dupBtn.style.boxShadow = '';
+      }
     } catch(err) {
       logLine('Check failed: ' + err.message, 'error');
       setLogState('error');
@@ -1531,7 +1539,7 @@
       logLine('Added to list (demo) · ' + (_sourceDocData.title || url), 'ok');
       btn.textContent = '✓ Added!'; btn.style.background = 'var(--state-green)'; btn.style.color = 'white';
       setLogState('done');
-      setTimeout(() => { btn.textContent = '↗ Create Duplicate in CB'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
+      setTimeout(() => { btn.textContent = '🐦 Create Duplicate in CB'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
       return;
     }
     try {
@@ -1543,11 +1551,11 @@
       logLine('Added to Sheet · ' + (_sourceDocData.title || url), 'ok');
       btn.textContent = '✓ Added!'; btn.style.background = 'var(--state-green)'; btn.style.color = 'white';
       setLogState('done');
-      setTimeout(() => { btn.textContent = '↗ Create Duplicate in CB'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
+      setTimeout(() => { btn.textContent = '🐦 Create Duplicate in CB'; btn.style.background = 'var(--dark)'; btn.style.color = 'var(--yellow)'; btn.disabled = false; }, 2500);
     } catch(e) {
       logLine('Copy to list failed: ' + e.message, 'error');
       setLogState('error');
-      btn.disabled = false; btn.textContent = '↗ Create Duplicate in CB';
+      btn.disabled = false; btn.textContent = '🐦 Create Duplicate in CB';
     }
   }
 
@@ -1588,6 +1596,16 @@
     }
     window.open(selectedDocData.docUrl, '_blank');
     logLine('Opening CB document: ' + selectedDocData.docUrl, 'info');
+  }
+
+  function openSourceInCB() {
+    if (!sourceDocUrl) {
+      logLine('No source document URL – please run a check first', 'warn');
+      return;
+    }
+    window.open(sourceDocUrl, '_blank');
+    logLine('Opening DE source in ContentBird – use the "Duplicate" button there to create a ' + (selectedLang || '').toUpperCase() + ' version, then come back and run the check again', 'info');
+    showToast('🐦 Opened in ContentBird – duplicate there, then re-check here');
   }
 
   // Patch selectLanguage to show action bar when doc exists
