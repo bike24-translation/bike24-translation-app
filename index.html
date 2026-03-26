@@ -366,7 +366,7 @@
       <div class="card-body">
         <div class="field">
           <label>ContentBird Source URL <span class="req">*</span></label>
-          <input type="url" id="statusUrl" placeholder="https://bike24net.mycontentbird.io/creation/content/…" oninput="onUrlInput()">
+          <input type="url" id="statusUrl" placeholder="https://bike24net.mycontentbird.io/creation/content/…" oninput="onUrlInput()" onchange="onUrlInput()" onpaste="setTimeout(onUrlInput,0)">
           <span class="help">Enter the source document URL</span>
           <!-- Detected language display -->
           <div id="detectedLangBox" style="display:none;margin-top:6px;padding:6px 10px;background:var(--blue100);border:1px solid var(--blue300);border-radius:7px;font-size:11px;color:var(--blue600);align-items:center;gap:6px;">
@@ -925,8 +925,16 @@
     const contentId = match[1];
     sourceDocUrl = url;
 
+    // Hard-reset state for every new check
+    duplicatesData  = [];
+    selectedLang    = null;
+    selectedDocData = null;
+    renderAllPills('dimmed');
+    resetStage2();
+
     const btn = document.getElementById('checkBtn');
     btn.disabled = true; btn.textContent = '⏳ Checking…';
+    btn.style.background = ''; btn.style.color = '';
     setLogState('running');
     logLine('▶ Stage 1 · ContentBird Reference Check', 'step');
     logLine('Source: ' + url, 'info');
