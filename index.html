@@ -366,7 +366,7 @@
       <div class="card-body">
         <div class="field">
           <label>ContentBird Source URL <span class="req">*</span></label>
-          <input type="url" id="statusUrl" placeholder="https://bike24net.mycontentbird.io/creation/content/…" oninput="onUrlInput()" onchange="onUrlInput()" onpaste="setTimeout(onUrlInput,0)">
+          <input type="url" id="statusUrl" placeholder="https://bike24net.mycontentbird.io/creation/content/…" oninput="onUrlInput()" onchange="onUrlInput()" onpaste="setTimeout(onUrlInput,100)">
           <span class="help">Enter the source document URL</span>
           <!-- Detected language display -->
           <div id="detectedLangBox" style="display:none;margin-top:6px;padding:6px 10px;background:var(--blue100);border:1px solid var(--blue300);border-radius:7px;font-size:11px;color:var(--blue600);align-items:center;gap:6px;">
@@ -862,13 +862,9 @@
   }
 
   // ── URL INPUT ──
-  let _fetchTitleTimer = null;
-
   function onUrlInput() {
     const url = document.getElementById('statusUrl').value.trim();
     const hasId = /\/content\/\d+/.test(url);
-    // Cancel any pending fetchDocTitle timer immediately
-    if (_fetchTitleTimer) { clearTimeout(_fetchTitleTimer); _fetchTitleTimer = null; }
     const btn = document.getElementById('checkBtn');
     btn.disabled = !hasId;
     btn.textContent = '🔍 Check for Versions';
@@ -883,6 +879,7 @@
     if (hasId) fetchDocTitle(url);
   }
 
+  let _fetchTitleTimer = null;
   async function fetchDocTitle(url) {
     if (_fetchTitleTimer) clearTimeout(_fetchTitleTimer);
     _fetchTitleTimer = setTimeout(async () => {
